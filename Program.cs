@@ -42,7 +42,7 @@ class Program
                 StorageAccountName = storageAccount.Name,
                 StorageContainerName = storageContainer.Name,
                 Type = "Block",
-                Source = new FileArchive("./app"),
+                Source = new FileArchive("./app/bin/Debug/netcoreapp3.1/publish"),
             });
             var appBlobUrl = SharedAccessSignature.SignedBlobReadUrl(appBlob, storageAccount);
 
@@ -62,7 +62,7 @@ class Program
             var appInsight = new Insights("pmc", new InsightsArgs
             {
                 ResourceGroupName = resourceGroup.Name,
-                ApplicationType = "other",
+                ApplicationType = "web",
             });
 
             // Create an Azure App Service
