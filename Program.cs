@@ -63,6 +63,7 @@ class Program
             {
                 ResourceGroupName = resourceGroup.Name,
                 ApplicationType = "web",
+                RetentionInDays = 730,
             });
 
             // Create an Azure App Service
