@@ -79,6 +79,9 @@ class Program
                 HttpsOnly = true,
             });
 
+            // Create an Azure Availability Test for the app
+            AddWebTest(resourceGroup, appInsight, "apphome", Output.Format($"https://{appService.DefaultSiteHostname}/"));
+
             // Create an Azure CDN Profile
             var cdnProfile = new Profile("pmc", new ProfileArgs
             {
@@ -106,6 +109,9 @@ class Program
                 },
             });
 
+            // Create an Azure Availability Test for the CDN
+            AddWebTest(resourceGroup, appInsight, "cdnhome", Output.Format($"https://{cdnEndpoint.HostName}/"));
+
             // NOTE: Manually add custom domain and enable CDN managed TLS
 
             // Export the connection string for the storage account
@@ -115,6 +121,37 @@ class Program
                 { "app-endpoint", Output.Format($"https://{appService.DefaultSiteHostname}") },
                 { "cdn-endpoint", Output.Format($"https://{cdnEndpoint.HostName}") },
             };
+        });
+    }
+
+    static void AddWebTest(ResourceGroup resourceGroup, Insights appInsight, string name, Output<string> url)
+    {
+        new WebTest($"pmc{name}", new WebTestArgs
+        {
+            ResourceGroupName = resourceGroup.Name,
+            ApplicationInsightsId = appInsight.Id,
+            Kind = "ping",
+            Enabled = true,
+            GeoLocations = new[]
+            {
+                "apac-hk-hkn-azr",
+                "apac-jp-kaw-edge",
+                "apac-sg-sin-azr",
+                "emea-au-syd-edge",
+                "emea-ch-zrh-edge",
+                "emea-fr-pra-edge",
+                "emea-gb-db3-azr",
+                "emea-nl-ams-azr",
+                "emea-ru-msa-edge",
+                "emea-se-sto-edge",
+                "latam-br-gru-edge",
+                "us-ca-sjc-azr",
+                "us-fl-mia-edge",
+                "us-il-ch1-azr",
+                "us-tx-sn1-azr",
+                "us-va-ash-azr",
+            },
+            Configuration = Output.Format($"<WebTest xmlns=\"http://microsoft.com/schemas/VisualStudio/TeamTest/2010\"><Items><Request Method=\"GET\" Version=\"1.1\" Url=\"{url}\" /></Items></WebTest>"),
         });
     }
 }
