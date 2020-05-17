@@ -107,6 +107,7 @@ class Program
                         HostName = appService.DefaultSiteHostname,
                     },
                 },
+                QuerystringCachingBehaviour = "UseQueryString",
             });
 
             // Create an Azure Availability Test for the CDN
