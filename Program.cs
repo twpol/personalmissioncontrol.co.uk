@@ -107,6 +107,7 @@ class Program
                         HostName = appService.DefaultSiteHostname,
                     },
                 },
+                QuerystringCachingBehaviour = "UseQueryString",
             });
 
             // Create an Azure Availability Test for the CDN
@@ -134,22 +135,10 @@ class Program
             Enabled = true,
             GeoLocations = new[]
             {
-                "apac-hk-hkn-azr",
                 "apac-jp-kaw-edge",
-                "apac-sg-sin-azr",
-                "emea-au-syd-edge",
-                "emea-ch-zrh-edge",
                 "emea-fr-pra-edge",
-                "emea-gb-db3-azr",
-                "emea-nl-ams-azr",
-                "emea-ru-msa-edge",
-                "emea-se-sto-edge",
                 "latam-br-gru-edge",
-                "us-ca-sjc-azr",
                 "us-fl-mia-edge",
-                "us-il-ch1-azr",
-                "us-tx-sn1-azr",
-                "us-va-ash-azr",
             },
             Configuration = Output.Format($"<WebTest xmlns=\"http://microsoft.com/schemas/VisualStudio/TeamTest/2010\"><Items><Request Method=\"GET\" Version=\"1.1\" Url=\"{url}\" /></Items></WebTest>"),
         });
