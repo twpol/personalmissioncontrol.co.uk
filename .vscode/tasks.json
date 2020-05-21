@@ -36,6 +36,9 @@
                 "/property:GenerateFullPaths=true",
                 "/consoleloggerparameters:NoSummary"
             ],
+            "options": {
+                "cwd": "${workspaceFolder}/app"
+            },
             "problemMatcher": "$msCompile"
         },
         {

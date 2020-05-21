@@ -2,12 +2,15 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using Microsoft.AspNetCore.Authentication.Cookies;
+using Microsoft.AspNetCore.Authentication.MicrosoftAccount;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
-using Microsoft.AspNetCore.HttpsPolicy;
+using Microsoft.AspNetCore.Mvc.ApplicationModels;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Options;
 
 namespace app
 {
@@ -24,7 +27,26 @@ namespace app
         public void ConfigureServices(IServiceCollection services)
         {
             services.AddApplicationInsightsTelemetry();
-            services.AddRazorPages();
+            services.AddRazorPages(options =>
+            {
+                options.Conventions.Add(new PageRouteTransformerConvention(new LowerCaseUrls()));
+            });
+
+            services.AddAuthentication(MicrosoftAccountDefaults.AuthenticationScheme)
+                .AddCookie()
+                .AddMicrosoftAccount(options =>
+                {
+                    options.ClientId = Configuration["Authentication:Microsoft:ClientId"];
+                    options.ClientSecret = Configuration["Authentication:Microsoft:ClientSecret"];
+                    options.SignInScheme = CookieAuthenticationDefaults.AuthenticationScheme;
+                    options.Scope.Add("https://graph.microsoft.com/Mail.Read");
+                    options.Scope.Add("https://graph.microsoft.com/MailboxSettings.Read");
+                    options.Scope.Add("https://graph.microsoft.com/User.Read");
+                    options.SaveTokens = true;
+                });
+
+            services.AddTransient<ITicketStore, InMemoryTicketStore>();
+            services.AddSingleton<IPostConfigureOptions<CookieAuthenticationOptions>, PostConfigureCookieAuthenticationOptions>();
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
@@ -46,6 +68,7 @@ namespace app
 
             app.UseRouting();
 
+            app.UseAuthentication();
             app.UseAuthorization();
 
             app.UseEndpoints(endpoints =>
