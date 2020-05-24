@@ -8,7 +8,6 @@ using Microsoft.Extensions.Logging;
 
 namespace app.Pages
 {
-    [ResponseCache(Duration = 1, Location = ResponseCacheLocation.Client)]
     public class IndexModel : PageModel
     {
         private readonly ILogger<IndexModel> _logger;

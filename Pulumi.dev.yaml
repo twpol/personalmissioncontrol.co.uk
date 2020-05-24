@@ -1,2 +1,7 @@
 config:
   azure:location: UKSouth
+  personalmissioncontrol.co.uk:Authentication.Microsoft.ClientId: d1c1aba4-c168-481c-9518-d78af78a197d
+  personalmissioncontrol.co.uk:Authentication.Microsoft.ClientSecret:
+    secure: AAABAIbsG46SkijZ8bUg+Kc0k5xGZrWF3j9+r/ZCrbzKtc+ntargzOO7uu6bv7bryrwqZkWmsXEXy6E6PMS01nPM
+  personalmissioncontrol.co.uk:PrincipalId: 3a98bd0e-f552-4b8a-9aed-4256c74fde1e
+  personalmissioncontrol.co.uk:TenantId: 8e16f98a-caac-46c5-9e29-61b127e9e5bd

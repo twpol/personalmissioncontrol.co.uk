@@ -8,6 +8,8 @@ using Pulumi.Azure.AppService.Inputs;
 using Pulumi.Azure.Cdn;
 using Pulumi.Azure.Cdn.Inputs;
 using Pulumi.Azure.Core;
+using Pulumi.Azure.KeyVault;
+using Pulumi.Azure.KeyVault.Inputs;
 using Pulumi.Azure.Storage;
 
 class Program
@@ -16,6 +18,7 @@ class Program
     {
         return Deployment.RunAsync(() =>
         {
+            var config = new Config();
 
             // Create an Azure Resource Group
             var resourceGroup = new ResourceGroup($"{Deployment.Instance.ProjectName}-{Deployment.Instance.StackName}-");
@@ -66,6 +69,36 @@ class Program
                 RetentionInDays = 730,
             });
 
+            // Create an Azure Key Vault
+            var vault = new KeyVault("pmc", new KeyVaultArgs
+            {
+                ResourceGroupName = resourceGroup.Name,
+                SkuName = "standard",
+                TenantId = config.Require("TenantId"),
+                AccessPolicies = new[]
+                {
+                    new KeyVaultAccessPolicyArgs
+                    {
+                        TenantId = config.Require("TenantId"),
+                        ObjectId = config.Require("PrincipalId"),
+                        SecretPermissions = new []
+                        {
+                            "delete",
+                            "get",
+                            "list",
+                            "set",
+                        }
+                    },
+                }
+            });
+
+            // Create an Azure Secret for Microsoft OAuth
+            var microsoftOAuthClientSecret = new Secret("pmcmsoauthcs", new SecretArgs
+            {
+                KeyVaultId = vault.Id,
+                Value = config.RequireSecret("Authentication.Microsoft.ClientSecret"),
+            });
+
             // Create an Azure App Service
             var appService = new AppService("pmc", new AppServiceArgs
             {
@@ -75,8 +108,26 @@ class Program
                 {
                     { "WEBSITE_RUN_FROM_ZIP", appBlobUrl },
                     { "APPINSIGHTS_INSTRUMENTATIONKEY", appInsight.InstrumentationKey },
+                    { "Authentication__Microsoft__ClientId", config.Require("Authentication.Microsoft.ClientId") },
+                    { "Authentication__Microsoft__ClientSecret", GetAppSecret(vault, microsoftOAuthClientSecret) },
+                },
+                Identity = new AppServiceIdentityArgs
+                {
+                    Type = "SystemAssigned",
                 },
                 HttpsOnly = true,
+            });
+
+            // Grant App Service access to Key Vault secrets
+            new AccessPolicy("pmc", new AccessPolicyArgs
+            {
+                KeyVaultId = vault.Id,
+                TenantId = config.Require("TenantId"),
+                ObjectId = appService.Identity.Apply(id => id.PrincipalId),
+                SecretPermissions = new[]
+                {
+                    "get",
+                },
             });
 
             // Create an Azure Availability Test for the app
@@ -96,8 +147,6 @@ class Program
                 ResourceGroupName = resourceGroup.Name,
                 Location = "West Europe",
                 ProfileName = cdnProfile.Name,
-                IsHttpAllowed = false,
-                IsHttpsAllowed = true,
                 OriginHostHeader = appService.DefaultSiteHostname,
                 Origins =
                 {
@@ -108,6 +157,31 @@ class Program
                     },
                 },
                 QuerystringCachingBehaviour = "UseQueryString",
+                DeliveryRules = new[]
+                {
+                    new EndpointDeliveryRuleArgs
+                    {
+                        Name = "dynamic",
+                        Order = 1,
+                        UrlFileExtensionConditions = new[]
+                        {
+                            new EndpointDeliveryRuleUrlFileExtensionConditionArgs
+                            {
+                                Operator = "Equal",
+                                NegateCondition = true,
+                                MatchValues = new[]
+                                {
+                                    "css",
+                                    "js",
+                                },
+                            },
+                        },
+                        CacheExpirationAction = new EndpointDeliveryRuleCacheExpirationActionArgs
+                        {
+                            Behavior = "BypassCache",
+                        },
+                    },
+                },
             });
 
             // Create an Azure Availability Test for the CDN
@@ -123,6 +197,11 @@ class Program
                 { "cdn-endpoint", Output.Format($"https://{cdnEndpoint.HostName}") },
             };
         });
+    }
+
+    static Output<string> GetAppSecret(KeyVault vault, Secret secret)
+    {
+        return Output.Format($"@Microsoft.KeyVault(SecretUri={vault.VaultUri}secrets/{secret.Name}/{secret.Version})");
     }
 
     static void AddWebTest(ResourceGroup resourceGroup, Insights appInsight, string name, Output<string> url)
