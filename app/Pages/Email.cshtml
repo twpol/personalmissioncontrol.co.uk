@@ -3,33 +3,20 @@
 @{
     ViewData["Title"] = "Email";
 }
-@using Microsoft.AspNetCore.Authentication
 
-<h2>User claims</h2>
-<dl>
-    @foreach (var claim in User.Claims)
+<nav aria-label="breadcrumb">
+    <ol class="breadcrumb">
+        <li class="breadcrumb-item"><a asp-area="" asp-page="/Index">Home</a></li>
+        <li class="breadcrumb-item active" aria-current="page">Email</li>
+    </ol>
+</nav>
+
+<h2>Recent conversations</h2>
+<ul>
+    @foreach (var conversation in Model.Conversations)
     {
-        <dt>@claim.Type</dt>
-        <dd>@claim.Value</dd>
+        <li>
+            <a asp-area="" asp-page="/Email/Conversation" asp-route-conversation="@conversation">@conversation</a>
+        </li>
     }
-</dl>
-
-<h2>Authentication properties</h2>
-@{
-    var authenticateResult = await HttpContext.AuthenticateAsync();
-}
-
-@if (authenticateResult.Succeeded)
-{
-    <dl>
-        @foreach (var prop in authenticateResult.Properties.Items)
-        {
-            <dt>@prop.Key</dt>
-            <dd>@prop.Value</dd>
-        }
-    </dl>
-}
-else
-{
-    <h1>Not Authenticated!</h1>
-}
+</ul>

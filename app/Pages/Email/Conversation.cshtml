@@ -1,0 +1,24 @@
+﻿@page "{conversation}"
+@model ConversationModel
+@{
+    ViewData["Title"] = $"{Model.Conversation} - Email";
+}
+
+<nav aria-label="breadcrumb">
+    <ol class="breadcrumb">
+        <li class="breadcrumb-item"><a asp-area="" asp-page="/Index">Home</a></li>
+        <li class="breadcrumb-item"><a asp-area="" asp-page="/Email">Email</a></li>
+        <li class="breadcrumb-item active" aria-current="page">@Model.Conversation</li>
+    </ol>
+</nav>
+
+<h1>@Model.Conversation</h1>
+<ol class="email-conversation">
+    @foreach (var email in Model.Emails)
+    {
+        <li class="email">
+            <h2>@email.SentDateTime - @email.From.EmailAddress.Name - @email.Flag.FlagStatus</h2>
+            <iframe class="seamless" sandbox="allow-same-origin allow-top-navigation-by-user-activation" scrolling="no" srcdoc="@ConversationModel.BaseEmailHtml@email.UniqueBody.Content"></iframe>
+        </li>
+    }
+</ol>

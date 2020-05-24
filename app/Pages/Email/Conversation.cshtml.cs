@@ -10,42 +10,71 @@ using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Graph;
 
-namespace app.Pages
+namespace app.Pages.Email
 {
     [Authorize]
-    public class EmailModel : PageModel
+    public class ConversationModel : PageModel
     {
-        public IEnumerable<string> Conversations = new List<string>();
+        public const string BaseEmailHtml = @"
+            <style>
+                html {
+                    font-family: sans-serif;
+                }
+                body {
+                    margin: 0;
+                }
+            </style>
+        ";
+
+        public string Conversation = "";
+
+        public IEnumerable<Message> Emails = new List<Message>();
 
         readonly IMemoryCache _cache;
 
-        public EmailModel(IMemoryCache cache)
+        public ConversationModel(IMemoryCache cache)
         {
             _cache = cache;
         }
 
-        public async Task OnGetAsync()
+        public async Task OnGetAsync(string conversation)
         {
+            Conversation = conversation;
+
             var authContext = await HttpContext.AuthenticateAsync();
             if (authContext.Succeeded)
             {
                 var graph = new GraphServiceClient(new Auth(authContext));
 
-                var recentEmails = await _cache.GetOrCreateAsync($"email/top-100-messages", entry =>
+                Emails = await _cache.GetOrCreateAsync($"email/conversation/{Conversation}", entry =>
                 {
                     entry.SlidingExpiration = TimeSpan.FromMinutes(60);
                     return graph.Me.Messages.Request()
-                        .Top(100)
+                        .Filter($"sentDateTime gt 2000-01-01 and (subject eq '{Conversation}' or subject eq 'Re: {Conversation}')")
+                        .OrderBy("sentDateTime")
                         .Select(email => new
                         {
+                            email.SentDateTime,
+                            email.From,
                             email.Subject,
+                            email.Flag,
+                            email.UniqueBody,
                         })
                         .GetAsync();
                 });
+            }
+        }
 
-                Conversations = from email in recentEmails
-                                group email by email.Subject into g
-                                select g.Key.Replace("Re: ", "", StringComparison.InvariantCultureIgnoreCase);
+        async IAsyncEnumerable<MailFolder> GetAllMailFolder(IUserMailFoldersCollectionRequest request)
+        {
+            while (request != null)
+            {
+                var page = await request.GetAsync();
+                foreach (var folder in page)
+                {
+                    yield return folder;
+                }
+                request = page.NextPageRequest;
             }
         }
     }

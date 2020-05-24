@@ -9,7 +9,7 @@ namespace app
 {
     public class LowerCaseUrls : IOutboundParameterTransformer
     {
-        public string TransformOutbound(object value)
+        public string? TransformOutbound(object value)
         {
             if (value == null)
             {

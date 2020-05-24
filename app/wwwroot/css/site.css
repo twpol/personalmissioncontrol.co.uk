@@ -6,3 +6,41 @@
   max-width: 20rem;
   max-height: 20rem;
 }
+
+iframe.seamless {
+  border: none;
+  width: 100%;
+}
+
+.email {
+  border: 0.5rem solid #888;
+  border-radius: 1.0rem;
+}
+
+.email > h2 {
+  border-bottom: 0.5rem solid #888;
+  padding: 1.0rem;
+  background: #888;
+}
+
+.email > iframe {
+  margin: 1.0rem;
+  width: calc(100% - 2.0rem);
+}
+
+.email-conversation {
+  padding-left: 0;
+  list-style: none;
+}
+
+.email-conversation > .email:not(:first-child) {
+  border-top: none;
+  border-top-left-radius: 0;
+  border-top-right-radius: 0;
+}
+
+.email-conversation > .email:not(:last-child) {
+  border-bottom: none;
+  border-bottom-left-radius: 0;
+  border-bottom-right-radius: 0;
+}

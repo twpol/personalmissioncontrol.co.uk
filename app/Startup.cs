@@ -49,8 +49,6 @@ namespace app
                     options.ClientSecret = Configuration["Authentication:Microsoft:ClientSecret"];
                     options.SignInScheme = CookieAuthenticationDefaults.AuthenticationScheme;
                     options.Scope.Add("https://graph.microsoft.com/Mail.Read");
-                    options.Scope.Add("https://graph.microsoft.com/MailboxSettings.Read");
-                    options.Scope.Add("https://graph.microsoft.com/User.Read");
                     options.SaveTokens = true;
                 });
 
