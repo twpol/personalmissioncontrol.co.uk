@@ -1,10 +1,12 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Threading.Tasks;
 
 using Pulumi;
+using Pulumi.AzureAD;
+using Pulumi.AzureAD.Inputs;
 using Pulumi.AzureNative.Cdn;
 using Pulumi.AzureNative.Insights;
-using Pulumi.AzureNative.Insights.Inputs;
 using Pulumi.AzureNative.Resources;
 using Pulumi.AzureNative.Storage;
 using Pulumi.AzureNative.Web;
@@ -16,6 +18,7 @@ class Program
     {
         return Pulumi.Deployment.RunAsync(() =>
         {
+            var config = new Pulumi.Config();
 
             // Create an Azure Resource Group
             var resourceGroup = new ResourceGroup($"{Pulumi.Deployment.Instance.ProjectName}-{Pulumi.Deployment.Instance.StackName}-");
@@ -53,8 +56,8 @@ class Program
             var appPlan = new AppServicePlan("pmc", new AppServicePlanArgs
             {
                 ResourceGroupName = resourceGroup.Name,
-                Kind = "Windows",
-                Sku = new Pulumi.AzureNative.Web.Inputs.SkuDescriptionArgs
+                Kind = "App",
+                Sku = new SkuDescriptionArgs
                 {
                     Name = "F1",
                     Tier = "Free",
@@ -69,6 +72,68 @@ class Program
                 RetentionInDays = 730,
             });
 
+            // Create an Azure App Registration
+            var appReg = new Application("pmc", new ApplicationArgs
+            {
+                DisplayName = "Personal Mission Control",
+                Api = new ApplicationApiArgs()
+                {
+                    RequestedAccessTokenVersion = 2,
+                },
+                RequiredResourceAccesses = new ApplicationRequiredResourceAccessArgs[]
+                {
+                    new()
+                    {
+                        ResourceAppId = "00000003-0000-0000-c000-000000000000" /* https://graph.microsoft.com/ */,
+                        ResourceAccesses = new ApplicationRequiredResourceAccessResourceAccessArgs[]
+                        {
+                            new()
+                            {
+                                Id = "e1fe6dd8-ba31-4d61-89e7-88639da4683d" /* https://graph.microsoft.com/User.Read */,
+                                Type = "Scope",
+                            },
+                            new()
+                            {
+                                Id = "87f447af-9fa4-4c32-9dfa-4a57a73d18ce" /* https://graph.microsoft.com/MailboxSettings.Read */,
+                                Type = "Scope",
+                            },
+                            new()
+                            {
+                                Id = "570282fd-fa5c-430d-a7fd-fc8dc98a9dca" /* https://graph.microsoft.com/Mail.Read */,
+                                Type = "Scope",
+                            },
+                            new()
+                            {
+                                Id = "7427e0e9-2fba-42fe-b0c0-848c9e6a8182" /* https://graph.microsoft.com/offline_access */,
+                                Type = "Scope",
+                            },
+                        },
+                    },
+                },
+                SignInAudience = "AzureADandPersonalMicrosoftAccount",
+                Web = new ApplicationWebArgs()
+                {
+                    HomepageUrl = $"https://{config.Get("domain")}",
+                    RedirectUris = new[]
+                    {
+                        "https://localhost/signin-microsoft",
+                        $"https://{config.Get("domain")}/signin-microsoft",
+                    },
+                },
+            });
+
+            // Create an Azure App Registration Secret
+            var appRegSecret = new ApplicationPassword("pmc", new ApplicationPasswordArgs()
+            {
+                ApplicationObjectId = appReg.Id,
+                DisplayName = "pulumi",
+                EndDateRelative = "2160h" /* 90 days */,
+                RotateWhenChanged = new()
+                {
+                    { "CurrentDate", DateTimeOffset.Now.Date.ToString() }
+                },
+            });
+
             // Create an Azure App Service
             var appService = new WebApp("pmc", new WebAppArgs
             {
@@ -76,10 +141,14 @@ class Program
                 ServerFarmId = appPlan.Id,
                 SiteConfig = new SiteConfigArgs
                 {
-                    AppSettings =
+                    NetFrameworkVersion = "5",
+                    FtpsState = FtpsState.Disabled,
+                    AppSettings = new NameValuePairArgs[]
                     {
-                        new NameValuePairArgs { Name = "WEBSITE_RUN_FROM_ZIP", Value = appBlobUrl },
-                        new NameValuePairArgs { Name = "APPINSIGHTS_INSTRUMENTATIONKEY", Value = appInsight.InstrumentationKey },
+                        new() { Name = "WEBSITE_RUN_FROM_PACKAGE", Value = appBlobUrl },
+                        new() { Name = "APPINSIGHTS_INSTRUMENTATIONKEY", Value = appInsight.InstrumentationKey },
+                        new() { Name = "Authentication__Microsoft__ClientId", Value = appReg.ApplicationId },
+                        new() { Name = "Authentication__Microsoft__ClientSecret", Value = appRegSecret.Value },
                     },
                 },
                 HttpsOnly = true,
@@ -116,39 +185,46 @@ class Program
                 QueryStringCachingBehavior = QueryStringCachingBehavior.UseQueryString,
             });
 
-            // NOTE: Manually add custom domain and enable CDN managed TLS
+            // Create an Azure CDN Endpoint Custom Domain
+            var cdnCustomDomain = new CustomDomain("pmc", new CustomDomainArgs
+            {
+                ResourceGroupName = resourceGroup.Name,
+                ProfileName = cdnProfile.Name,
+                EndpointName = cdnEndpoint.Name,
+                HostName = config.Require("domain"),
+            });
 
-            // Export the connection string for the storage account
+            // NOTE: Manually enable HTTPS certificate provisioning
+
+            // Export the endpoints
             return new Dictionary<string, object?>
             {
                 { "app-endpoint", Output.Format($"https://{appService.DefaultHostName}") },
                 { "cdn-endpoint", Output.Format($"https://{cdnEndpoint.HostName}") },
+                { "custom-endpoint", Output.Format($"https://{config.Get("domain")}") },
             };
         });
     }
 
     static Output<string> SignedBlobReadUrl(Blob blob, BlobContainer container, StorageAccount account, ResourceGroup resourceGroup)
     {
-        return Output.Tuple<string, string, string, string>(blob.Name, container.Name, account.Name, resourceGroup.Name).Apply(t =>
+        var serviceSasToken = ListStorageAccountServiceSAS.Invoke(new ListStorageAccountServiceSASInvokeArgs
         {
-            (string blobName, string containerName, string accountName, string resourceGroupName) = t;
+            AccountName = account.Name,
+            Protocols = HttpProtocol.Https,
+            SharedAccessStartTime = "2021-01-01",
+            SharedAccessExpiryTime = "2030-01-01",
+            Resource = SignedResource.C,
+            ResourceGroupName = resourceGroup.Name,
+            Permissions = Permissions.R,
+            CanonicalizedResource = Output.Format($"/blob/{account.Name}/{container.Name}"),
+            ContentType = "application/json",
+            CacheControl = "max-age=5",
+            ContentDisposition = "inline",
+            ContentEncoding = "deflate",
+        }).Apply(blobSAS => blobSAS.ServiceSasToken);
 
-            var blobSAS = ListStorageAccountServiceSAS.InvokeAsync(new ListStorageAccountServiceSASArgs
-            {
-                AccountName = accountName,
-                Protocols = HttpProtocol.Https,
-                SharedAccessStartTime = "2021-01-01",
-                SharedAccessExpiryTime = "2030-01-01",
-                Resource = SignedResource.C,
-                ResourceGroupName = resourceGroupName,
-                Permissions = Permissions.R,
-                CanonicalizedResource = "/blob/" + accountName + "/" + containerName,
-                ContentType = "application/json",
-                CacheControl = "max-age=5",
-                ContentDisposition = "inline",
-                ContentEncoding = "deflate",
-            });
-            return Output.Format($"https://{accountName}.blob.core.windows.net/{containerName}/{blobName}?{blobSAS.Result.ServiceSasToken}");
-        });
+        // Add blob contents hash to force App Service to pick up updates
+        return Output.Format($"https://{account.Name}.blob.core.windows.net/{container.Name}/{blob.Name}?{serviceSasToken}&src-hash={blob.ContentMd5}");
     }
 }
