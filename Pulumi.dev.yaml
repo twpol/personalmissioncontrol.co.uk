@@ -1,2 +1,2 @@
 config:
-  azure:location: UKSouth
+  azure-native:location: UKSouth

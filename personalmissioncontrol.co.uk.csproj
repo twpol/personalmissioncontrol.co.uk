@@ -2,13 +2,13 @@
 
   <PropertyGroup>
     <OutputType>Exe</OutputType>
-    <TargetFramework>netcoreapp3.1</TargetFramework>
+    <TargetFramework>net5.0</TargetFramework>
     <Nullable>enable</Nullable>
     <DefaultItemExcludes>$(DefaultItemExcludes);app\**</DefaultItemExcludes>
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="Pulumi.Azure" Version="2.*" />
+    <PackageReference Include="Pulumi.AzureNative" Version="1.34.*" />
   </ItemGroup>
 
 </Project>
