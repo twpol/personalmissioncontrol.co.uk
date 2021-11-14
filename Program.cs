@@ -2,92 +2,98 @@
 using System.Threading.Tasks;
 
 using Pulumi;
-using Pulumi.Azure.AppInsights;
-using Pulumi.Azure.AppService;
-using Pulumi.Azure.AppService.Inputs;
-using Pulumi.Azure.Cdn;
-using Pulumi.Azure.Cdn.Inputs;
-using Pulumi.Azure.Core;
-using Pulumi.Azure.Storage;
+using Pulumi.AzureNative.Cdn;
+using Pulumi.AzureNative.Insights;
+using Pulumi.AzureNative.Insights.Inputs;
+using Pulumi.AzureNative.Resources;
+using Pulumi.AzureNative.Storage;
+using Pulumi.AzureNative.Web;
+using Pulumi.AzureNative.Web.Inputs;
 
 class Program
 {
     static Task<int> Main()
     {
-        return Deployment.RunAsync(() =>
+        return Pulumi.Deployment.RunAsync(() =>
         {
 
             // Create an Azure Resource Group
-            var resourceGroup = new ResourceGroup($"{Deployment.Instance.ProjectName}-{Deployment.Instance.StackName}-");
+            var resourceGroup = new ResourceGroup($"{Pulumi.Deployment.Instance.ProjectName}-{Pulumi.Deployment.Instance.StackName}-");
 
             // Create an Azure Storage Account
-            var storageAccount = new Account("pmc", new AccountArgs
+            var storageAccount = new StorageAccount("pmc", new StorageAccountArgs
             {
                 ResourceGroupName = resourceGroup.Name,
-                AccountReplicationType = "LRS",
-                AccountTier = "Standard",
-                EnableHttpsTrafficOnly = true,
+                Kind = Pulumi.AzureNative.Storage.Kind.StorageV2,
+                Sku = new Pulumi.AzureNative.Storage.Inputs.SkuArgs
+                {
+                    Name = Pulumi.AzureNative.Storage.SkuName.Standard_LRS,
+                },
             });
 
             // Create an Azure Storage Container
-            var storageContainer = new Container("pmc", new ContainerArgs
+            var storageContainer = new BlobContainer("pmc", new BlobContainerArgs
             {
-                StorageAccountName = storageAccount.Name,
-                ContainerAccessType = "private",
+                ResourceGroupName = resourceGroup.Name,
+                AccountName = storageAccount.Name,
+                PublicAccess = PublicAccess.None,
             });
 
             // Create an Azure Storage Blob
             var appBlob = new Blob("pmc", new BlobArgs
             {
-                StorageAccountName = storageAccount.Name,
-                StorageContainerName = storageContainer.Name,
-                Type = "Block",
-                Source = new FileArchive("./app/bin/Debug/netcoreapp3.1/publish"),
+                ResourceGroupName = resourceGroup.Name,
+                AccountName = storageAccount.Name,
+                ContainerName = storageContainer.Name,
+                Source = new FileArchive("./app/bin/Debug/net5.0/publish"),
             });
-            var appBlobUrl = SharedAccessSignature.SignedBlobReadUrl(appBlob, storageAccount);
+            var appBlobUrl = SignedBlobReadUrl(appBlob, storageContainer, storageAccount, resourceGroup);
 
             // Create an Azure App Service Plan
-            var appPlan = new Plan("pmc", new PlanArgs
+            var appPlan = new AppServicePlan("pmc", new AppServicePlanArgs
             {
                 ResourceGroupName = resourceGroup.Name,
                 Kind = "Windows",
-                Sku = new PlanSkuArgs
+                Sku = new Pulumi.AzureNative.Web.Inputs.SkuDescriptionArgs
                 {
+                    Name = "F1",
                     Tier = "Free",
-                    Size = "F1",
-                },
+                }
             });
 
             // Create an Azure App Insight
-            var appInsight = new Insights("pmc", new InsightsArgs
+            var appInsight = new Component("pmc", new ComponentArgs
             {
                 ResourceGroupName = resourceGroup.Name,
-                ApplicationType = "web",
+                Kind = "web",
                 RetentionInDays = 730,
             });
 
             // Create an Azure App Service
-            var appService = new AppService("pmc", new AppServiceArgs
+            var appService = new WebApp("pmc", new WebAppArgs
             {
                 ResourceGroupName = resourceGroup.Name,
-                AppServicePlanId = appPlan.Id,
-                AppSettings = new InputMap<string>
+                ServerFarmId = appPlan.Id,
+                SiteConfig = new SiteConfigArgs
                 {
-                    { "WEBSITE_RUN_FROM_ZIP", appBlobUrl },
-                    { "APPINSIGHTS_INSTRUMENTATIONKEY", appInsight.InstrumentationKey },
+                    AppSettings =
+                    {
+                        new NameValuePairArgs { Name = "WEBSITE_RUN_FROM_ZIP", Value = appBlobUrl },
+                        new NameValuePairArgs { Name = "APPINSIGHTS_INSTRUMENTATIONKEY", Value = appInsight.InstrumentationKey },
+                    },
                 },
                 HttpsOnly = true,
             });
-
-            // Create an Azure Availability Test for the app
-            AddWebTest(resourceGroup, appInsight, "apphome", Output.Format($"https://{appService.DefaultSiteHostname}/"));
 
             // Create an Azure CDN Profile
             var cdnProfile = new Profile("pmc", new ProfileArgs
             {
                 ResourceGroupName = resourceGroup.Name,
                 Location = "West Europe",
-                Sku = "Standard_Microsoft",
+                Sku = new Pulumi.AzureNative.Cdn.Inputs.SkuArgs
+                {
+                    Name = Pulumi.AzureNative.Cdn.SkuName.Standard_Microsoft,
+                },
             });
 
             // Create an Azure CDN Endpoint
@@ -98,49 +104,51 @@ class Program
                 ProfileName = cdnProfile.Name,
                 IsHttpAllowed = false,
                 IsHttpsAllowed = true,
-                OriginHostHeader = appService.DefaultSiteHostname,
+                OriginHostHeader = appService.DefaultHostName,
                 Origins =
                 {
-                    new EndpointOriginArgs
+                    new Pulumi.AzureNative.Cdn.Inputs.DeepCreatedOriginArgs
                     {
                         Name = "pmc",
-                        HostName = appService.DefaultSiteHostname,
+                        HostName = appService.DefaultHostName,
                     },
                 },
-                QuerystringCachingBehaviour = "UseQueryString",
+                QueryStringCachingBehavior = QueryStringCachingBehavior.UseQueryString,
             });
-
-            // Create an Azure Availability Test for the CDN
-            AddWebTest(resourceGroup, appInsight, "cdnhome", Output.Format($"https://{cdnEndpoint.HostName}/"));
 
             // NOTE: Manually add custom domain and enable CDN managed TLS
 
             // Export the connection string for the storage account
             return new Dictionary<string, object?>
             {
-                { "connectionString", storageAccount.PrimaryConnectionString },
-                { "app-endpoint", Output.Format($"https://{appService.DefaultSiteHostname}") },
+                { "app-endpoint", Output.Format($"https://{appService.DefaultHostName}") },
                 { "cdn-endpoint", Output.Format($"https://{cdnEndpoint.HostName}") },
             };
         });
     }
 
-    static void AddWebTest(ResourceGroup resourceGroup, Insights appInsight, string name, Output<string> url)
+    static Output<string> SignedBlobReadUrl(Blob blob, BlobContainer container, StorageAccount account, ResourceGroup resourceGroup)
     {
-        new WebTest($"pmc{name}", new WebTestArgs
+        return Output.Tuple<string, string, string, string>(blob.Name, container.Name, account.Name, resourceGroup.Name).Apply(t =>
         {
-            ResourceGroupName = resourceGroup.Name,
-            ApplicationInsightsId = appInsight.Id,
-            Kind = "ping",
-            Enabled = true,
-            GeoLocations = new[]
+            (string blobName, string containerName, string accountName, string resourceGroupName) = t;
+
+            var blobSAS = ListStorageAccountServiceSAS.InvokeAsync(new ListStorageAccountServiceSASArgs
             {
-                "apac-jp-kaw-edge",
-                "emea-fr-pra-edge",
-                "latam-br-gru-edge",
-                "us-fl-mia-edge",
-            },
-            Configuration = Output.Format($"<WebTest xmlns=\"http://microsoft.com/schemas/VisualStudio/TeamTest/2010\"><Items><Request Method=\"GET\" Version=\"1.1\" Url=\"{url}\" /></Items></WebTest>"),
+                AccountName = accountName,
+                Protocols = HttpProtocol.Https,
+                SharedAccessStartTime = "2021-01-01",
+                SharedAccessExpiryTime = "2030-01-01",
+                Resource = SignedResource.C,
+                ResourceGroupName = resourceGroupName,
+                Permissions = Permissions.R,
+                CanonicalizedResource = "/blob/" + accountName + "/" + containerName,
+                ContentType = "application/json",
+                CacheControl = "max-age=5",
+                ContentDisposition = "inline",
+                ContentEncoding = "deflate",
+            });
+            return Output.Format($"https://{accountName}.blob.core.windows.net/{containerName}/{blobName}?{blobSAS.Result.ServiceSasToken}");
         });
     }
 }
