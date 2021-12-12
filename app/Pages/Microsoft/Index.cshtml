@@ -1,0 +1,18 @@
+@page
+@model app.Pages.Microsoft.IndexModel
+@{
+    ViewData["Title"] = "Microsoft";
+}
+
+<nav aria-label="breadcrumb">
+    <ol class="breadcrumb">
+        <li class="breadcrumb-item"><a asp-area="" asp-page="/Index">Home</a></li>
+        <li class="breadcrumb-item active" aria-current="page">Microsoft</li>
+    </ol>
+</nav>
+
+<h1>Microsoft services</h1>
+
+<p>
+    Logged in as @Model.UserName (@Model.UserEmail)
+</p>
