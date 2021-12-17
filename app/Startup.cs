@@ -57,6 +57,8 @@ namespace app
 
             services.AddSingleton<IAuthorizationMiddlewareResultHandler, MultipleAuthenticationAuthorizationMiddlewareResultHandler>();
 
+            services.AddScoped<MicrosoftGraphProvider>();
+
             services.AddRazorPages();
         }
 
