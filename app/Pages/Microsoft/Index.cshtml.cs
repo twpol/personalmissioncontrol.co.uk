@@ -1,5 +1,6 @@
-using System.Linq;
+using System.Threading.Tasks;
 using app.Auth;
+using Microsoft.Graph;
 
 namespace app.Pages.Microsoft
 {
@@ -8,14 +9,18 @@ namespace app.Pages.Microsoft
         public string UserName { get; set; }
         public string UserEmail { get; set; }
 
-        public IndexModel()
+        GraphServiceClient Graph;
+
+        public IndexModel(MicrosoftGraphProvider graphProvider)
         {
+            Graph = graphProvider.Client;
         }
 
-        public void OnGet()
+        public async Task OnGet()
         {
-            UserName = HttpContext.User.Claims.FirstOrDefault(claim => claim.Type == "http://schemas.xmlsoap.org/ws/2005/05/identity/claims/name")?.Value;
-            UserEmail = HttpContext.User.Claims.FirstOrDefault(claim => claim.Type == "http://schemas.xmlsoap.org/ws/2005/05/identity/claims/emailaddress")?.Value;
+            var user = await Graph.Me.Request().GetAsync();
+            UserName = user.DisplayName;
+            UserEmail = user.UserPrincipalName;
         }
     }
 }

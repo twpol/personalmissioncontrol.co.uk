@@ -1,0 +1,34 @@
+using System.Net.Http;
+using System.Threading.Tasks;
+using Microsoft.AspNetCore.Authentication;
+using Microsoft.AspNetCore.Http;
+using Microsoft.Graph;
+
+namespace app.Auth
+{
+    public class MicrosoftGraphProvider : IAuthenticationProvider
+    {
+        public GraphServiceClient Client { get; init; }
+
+        string Authorization { get; init; }
+
+        public MicrosoftGraphProvider(IHttpContextAccessor contextAccessor)
+        {
+            var context = contextAccessor.HttpContext;
+            if (context.Items.ContainsKey("AuthenticationProperties"))
+            {
+                var auth = context.Items["AuthenticationProperties"] as AuthenticationProperties;
+                var type = auth.GetTokenValue("token_type");
+                var token = auth.GetTokenValue("access_token");
+                Authorization = $"{type} {token}";
+                Client = new GraphServiceClient(this);
+            }
+        }
+
+        public Task AuthenticateRequestAsync(HttpRequestMessage request)
+        {
+            if (Authorization.Length > 0) request.Headers.Add("Authorization", Authorization);
+            return Task.CompletedTask;
+        }
+    }
+}

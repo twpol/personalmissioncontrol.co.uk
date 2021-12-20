@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Security.Claims;
@@ -110,10 +111,21 @@ namespace app.Auth
                 if (requirement is MultipleAuthenticationRequirement mar && context.User.Identities.Any(id => id.AuthenticationType == mar.Scheme))
                 {
                     context.Succeed(requirement);
+                    if (context.Resource is HttpContext httpContext)
+                    {
+                        if (httpContext.Session.TryGetValue($"multiple-authentication-properties-{Scheme}", out var propertiesData))
+                        {
+                            var json = JsonSerializer.Deserialize<AuthenticationPropertiesJson>(propertiesData);
+                            httpContext.Items["AuthenticationProperties"] = new AuthenticationProperties(json.Items);
+                        }
+                    }
                 }
             }
 
             return Task.CompletedTask;
         }
+
     }
+
+    record AuthenticationPropertiesJson(IDictionary<string, string> Items);
 }
