@@ -45,6 +45,7 @@ namespace app
                 {
                     options.ClientId = Configuration["Authentication:Microsoft:ClientId"];
                     options.ClientSecret = Configuration["Authentication:Microsoft:ClientSecret"];
+                    options.Scope.Add("mail.read");
                     options.Scope.Add("offline_access");
                     options.SaveTokens = true;
                     options.ForwardAuthenticate = MultipleAuthenticationDefaults.AuthenticationScheme;

@@ -1,0 +1,16 @@
+@page
+@model app.Pages.Microsoft.Email.FolderModel
+@{
+    ViewData["Title"] = Model.Folder.DisplayName + " - E-mail - Microsoft";
+}
+
+<nav aria-label="breadcrumb">
+    <ol class="breadcrumb">
+        <li class="breadcrumb-item"><a asp-area="" asp-page="/Index">Home</a></li>
+        <li class="breadcrumb-item"><a asp-area="" asp-page="/Microsoft/Index">Microsoft</a></li>
+        <li class="breadcrumb-item"><a asp-area="" asp-page="/Microsoft/Index/Email">E-mail</a></li>
+        <li class="breadcrumb-item active" aria-current="page">@Model.Folder.DisplayName</li>
+    </ol>
+</nav>
+
+<h1>Microsoft E-mail Folder @Model.Folder.DisplayName</h1>

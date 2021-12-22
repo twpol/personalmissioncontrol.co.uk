@@ -1,0 +1,47 @@
+@page
+@model app.Pages.Microsoft.Email.IndexModel
+@{
+    ViewData["Title"] = "E-mail - Microsoft";
+}
+
+<nav aria-label="breadcrumb">
+    <ol class="breadcrumb">
+        <li class="breadcrumb-item"><a asp-area="" asp-page="/Index">Home</a></li>
+        <li class="breadcrumb-item"><a asp-area="" asp-page="/Microsoft/Index">Microsoft</a></li>
+        <li class="breadcrumb-item active" aria-current="page">E-mail</li>
+    </ol>
+</nav>
+
+<h1>Microsoft E-mail</h1>
+<ul>
+    @foreach (var folder1 in Model.Folders)
+    {
+        <li>
+            <a asp-page="/Microsoft/Email/Folder" asp-route-folder="@folder1.Id">@folder1.Name</a>
+            <ul>
+                @foreach (var folder2 in folder1.Children)
+                {
+                    <li>
+                        <a asp-page="/Microsoft/Email/Folder" asp-route-folder="@folder2.Id">@folder2.Name</a>
+                        <ul>
+                            @foreach (var folder3 in folder2.Children)
+                            {
+                                <li>
+                                    <a asp-page="/Microsoft/Email/Folder" asp-route-folder="@folder3.Id">@folder3.Name</a>
+                                    <ul>
+                                        @foreach (var folder4 in folder3.Children)
+                                        {
+                                            <li>
+                                                <a asp-page="/Microsoft/Email/Folder" asp-route-folder="@folder4.Id">@folder4.Name</a>
+                                            </li>
+                                        }
+                                    </ul>
+                                </li>
+                            }
+                        </ul>
+                    </li>
+                }
+            </ul>
+        </li>
+    }
+</ul>
