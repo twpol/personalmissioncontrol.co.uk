@@ -32,8 +32,6 @@ function messageAutoScroll() {
 
   messageHighlightScroll();
   document.addEventListener("scroll", debounce(messageHighlightScroll));
-
-  // TODO: Enable scrolling-based email unread status here
 }
 
 function messageHighlightScroll() {
@@ -50,8 +48,37 @@ function messageHighlightScroll() {
     if (currentMessage) {
       currentMessage.classList.add("current", "border-primary");
     }
+    messageUpdateUnreadScrollDBL();
   }
 }
+
+function messageUpdateUnreadScroll() {
+  const api = new URL(
+    `/api/${location.pathname.split("/")[1]}/email/status`,
+    location
+  );
+  const currentMessage = document.querySelector("ul.messages > li.current");
+  let unread = false;
+  for (const message of document.querySelectorAll("ul.messages > li")) {
+    if (message === currentMessage) unread = true;
+    const messageUnread = message.dataset.unread === "True";
+    if (messageUnread !== unread) {
+      api.search = new URLSearchParams([
+        ["id", message.dataset.id],
+        ["unread", unread],
+      ]).toString();
+      fetch(api, { method: "POST" });
+      message.dataset.unread = unread ? "True" : "False";
+    } else if (unread) {
+      break;
+    }
+  }
+}
+
+const messageUpdateUnreadScrollDBL = debounceLazy(
+  5000,
+  messageUpdateUnreadScroll
+);
 
 if (document.querySelector("ul.messages")) {
   window.addEventListener("load", function () {
@@ -68,5 +95,16 @@ function debounce(callback) {
       window.cancelAnimationFrame(timeout);
     }
     timeout = window.requestAnimationFrame(() => callback.apply(this, args));
+  };
+}
+
+function debounceLazy(delay, callback) {
+  let timeout;
+  return function () {
+    const args = arguments;
+    if (timeout) {
+      window.clearTimeout(timeout);
+    }
+    timeout = window.setTimeout(() => callback.apply(this, args), delay);
   };
 }
