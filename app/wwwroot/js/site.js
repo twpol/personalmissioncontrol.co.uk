@@ -30,7 +30,27 @@ function messageAutoScroll() {
   }
   document.documentElement.scrollTo(0, top - MESSAGE_TOP_OFFSET);
 
+  messageHighlightScroll();
+  document.addEventListener("scroll", debounce(messageHighlightScroll));
+
   // TODO: Enable scrolling-based email unread status here
+}
+
+function messageHighlightScroll() {
+  const oldCurrentMessage = document.querySelector("ul.messages > li.current");
+  const currentMessage = Array.of(
+    ...document.querySelectorAll("ul.messages > li")
+  ).find(
+    (message) => message.getBoundingClientRect().bottom > MESSAGE_TOP_OFFSET
+  );
+  if (oldCurrentMessage !== currentMessage) {
+    if (oldCurrentMessage) {
+      oldCurrentMessage.classList.remove("current", "border-primary");
+    }
+    if (currentMessage) {
+      currentMessage.classList.add("current", "border-primary");
+    }
+  }
 }
 
 if (document.querySelector("ul.messages")) {
@@ -38,4 +58,15 @@ if (document.querySelector("ul.messages")) {
     // Delay scroll by a tiny fraction so we override the browser's build in scroll position restoration
     setTimeout(messageAutoScroll, 100);
   });
+}
+
+function debounce(callback) {
+  let timeout;
+  return function () {
+    const args = arguments;
+    if (timeout) {
+      window.cancelAnimationFrame(timeout);
+    }
+    timeout = window.requestAnimationFrame(() => callback.apply(this, args));
+  };
 }
