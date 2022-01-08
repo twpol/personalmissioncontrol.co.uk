@@ -31,7 +31,7 @@
                 <div class="flex-110">@message.From.Name</div>
                 <div class="flex-110">@message.To.Name</div>
             </div>
-            <iframe class="seamless border-0 w-100" sandbox="allow-same-origin allow-top-navigation-by-user-activation" scrolling="no" srcdoc="@message.HtmlBodyForIFrame" height="0"></iframe>
+            <iframe class="seamless border-0 w-100" sandbox="allow-same-origin allow-popups allow-popups-to-escape-sandbox" scrolling="no" srcdoc="@message.HtmlBodyForIFrame" height="0"></iframe>
         </li>
     }
 </ul>

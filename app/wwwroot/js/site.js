@@ -2,6 +2,9 @@
   const frames = document.querySelectorAll("iframe.seamless");
   for (const frame of frames) {
     frame.height = frame.contentDocument.documentElement.offsetHeight;
+    for (const link of frame.contentDocument.querySelectorAll("a[href]")) {
+      link.target = "_blank";
+    }
   }
 }
 
