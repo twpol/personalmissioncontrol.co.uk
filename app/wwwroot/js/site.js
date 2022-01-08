@@ -22,13 +22,19 @@ const MESSAGE_TOP_OFFSET = 200;
 function messageAutoScroll() {
   const offset = document.documentElement.scrollTop;
   let top = 0;
+  let found = false;
   for (const message of document.querySelectorAll("ul.messages > li")) {
     top = message.getBoundingClientRect().top + offset;
     if (message.dataset.unread === "True") {
+      found = true;
       break;
     }
   }
-  document.documentElement.scrollTo(0, top - MESSAGE_TOP_OFFSET);
+  if (found) {
+    document.documentElement.scrollTo(0, top - MESSAGE_TOP_OFFSET);
+  } else {
+    document.documentElement.scrollTo(0, document.documentElement.scrollHeight);
+  }
 
   messageHighlightScroll();
   document.addEventListener("scroll", debounce(messageHighlightScroll));
