@@ -15,6 +15,14 @@
         "css/bootstrap.min.css",
         "js/bootstrap.bundle.min.js"
       ]
+    },
+    {
+      "library": "bootstrap-icons@1.7.2",
+      "files": [
+        "font/bootstrap-icons.min.css",
+        "font/fonts/bootstrap-icons.woff",
+        "font/fonts/bootstrap-icons.woff2"
+      ]
     }
   ]
 }
