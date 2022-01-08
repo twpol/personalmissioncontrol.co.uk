@@ -13,9 +13,13 @@ namespace app.Pages.Microsoft.Email
             <style>
                 body {
                     margin: 1rem;
+                    font-family: sans-serif;
                 }
                 img {
                     max-width: 100%;
+                }
+                pre {
+                    white-space: pre-wrap;
                 }
             </style>
         ";
