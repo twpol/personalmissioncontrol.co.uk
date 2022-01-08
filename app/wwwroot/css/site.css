@@ -25,3 +25,7 @@
 [data-completed=True] .bi-check-circle-fill.text-grey {
   display: none;
 }
+
+ul.messages {
+  padding-bottom: 100vh;
+}

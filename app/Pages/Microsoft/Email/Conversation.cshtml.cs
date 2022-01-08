@@ -57,6 +57,7 @@ namespace app.Pages.Microsoft.Email
                 })))
                 .OrderBy(message => message.SentDateTime)
                 .Select(message => new DisplayMessage(
+                    message.Id,
                     message.SentDateTime ?? DateTimeOffset.MinValue,
                     message.From.EmailAddress,
                     message.ToRecipients.First().EmailAddress,
@@ -93,7 +94,7 @@ namespace app.Pages.Microsoft.Email
             return subject;
         }
 
-        public record DisplayMessage(DateTimeOffset Date, EmailAddress From, EmailAddress To, bool Unread, bool Flagged, bool Completed, string HtmlBody)
+        public record DisplayMessage(string Id, DateTimeOffset Date, EmailAddress From, EmailAddress To, bool Unread, bool Flagged, bool Completed, string HtmlBody)
         {
             public string HtmlBodyForIFrame
             {
