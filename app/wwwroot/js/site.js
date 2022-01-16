@@ -5,6 +5,9 @@
     for (const link of frame.contentDocument.querySelectorAll("a[href]")) {
       link.target = "_blank";
     }
+    for (const link of frame.contentDocument.querySelectorAll("img[src]")) {
+      link.referrerPolicy = "no-referrer";
+    }
   }
 }
 
