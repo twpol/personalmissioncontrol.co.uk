@@ -45,6 +45,7 @@ namespace app
                 {
                     options.ClientId = Configuration["Authentication:Microsoft:ClientId"];
                     options.ClientSecret = Configuration["Authentication:Microsoft:ClientSecret"];
+                    options.Scope.Add("Mail.ReadWrite");
                     options.Scope.Add("offline_access");
                     options.SaveTokens = true;
                     options.ForwardAuthenticate = MultipleAuthenticationDefaults.AuthenticationScheme;
@@ -58,6 +59,8 @@ namespace app
             services.AddSingleton<IAuthorizationMiddlewareResultHandler, MultipleAuthenticationAuthorizationMiddlewareResultHandler>();
 
             services.AddScoped<MicrosoftGraphProvider>();
+
+            services.AddControllers();
 
             services.AddRazorPages();
         }
@@ -91,6 +94,7 @@ namespace app
 
             app.UseEndpoints(endpoints =>
             {
+                endpoints.MapControllers();
                 endpoints.MapRazorPages();
             });
         }

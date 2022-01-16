@@ -6,3 +6,26 @@
   max-width: 20rem;
   max-height: 20rem;
 }
+
+.text-blue { color: #007bff; }
+.text-green { color: green; }
+.text-grey { color: grey; }
+.text-red { color: red; }
+.text-white { color: white; }
+
+.flex-110 {
+  flex: 1 1 0;
+}
+
+[data-unread=False] .bi-envelope-fill.text-blue,
+[data-unread=True] .bi-envelope-open-fill.text-grey,
+[data-flagged=False] .bi-flag-fill.text-red,
+[data-flagged=True] .bi-flag-fill.text-grey,
+[data-completed=False] .bi-check-circle-fill.text-green,
+[data-completed=True] .bi-check-circle-fill.text-grey {
+  display: none;
+}
+
+ul.messages {
+  padding-bottom: calc(100vh - 200px);
+}

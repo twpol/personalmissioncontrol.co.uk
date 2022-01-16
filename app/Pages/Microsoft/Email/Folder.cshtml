@@ -1,0 +1,30 @@
+@page
+@model app.Pages.Microsoft.Email.FolderModel
+@{
+    ViewData["Title"] = Model.Folder.DisplayName + " - E-mail - Microsoft";
+}
+
+<nav aria-label="breadcrumb">
+    <ol class="breadcrumb">
+        <li class="breadcrumb-item"><a asp-area="" asp-page="/Index">Home</a></li>
+        <li class="breadcrumb-item"><a asp-area="" asp-page="/Microsoft/Index">Microsoft</a></li>
+        <li class="breadcrumb-item"><a asp-area="" asp-page="/Microsoft/Email/Index">E-mail</a></li>
+        <li class="breadcrumb-item active" aria-current="page">@Model.Folder.DisplayName</li>
+    </ol>
+</nav>
+
+<h1>@Model.Folder.DisplayName</h1>
+<ul class="list-unstyled">
+    @foreach (var conversation in Model.Conversations)
+    {
+        <li class="d-flex">
+            @if (conversation.Unread) { <i class="px-1 bi bi-envelope-fill text-blue"></i> } else { <i class="px-1 bi bi-envelope-open-fill text-grey"></i> }
+            @if (conversation.Flagged) { <i class="px-1 bi bi-flag-fill text-red"></i> } else { <i class="px-1 bi bi-flag-fill text-grey"></i> }
+            @if (conversation.Completed) { <i class="px-1 bi bi-check-circle-fill text-green"></i> } else { <i class="px-1 bi bi-check-circle-fill text-grey"></i> }
+            <a class="px-1 flex-fill text-truncate" asp-page="/Microsoft/Email/Conversation" asp-route-conversation="@conversation.Id">
+                @conversation.Name
+            </a>
+            <span class="px-1 flex-shrink-0 datetime-local" data-ts="@conversation.Date.ToString("o")"></span>
+        </li>
+    }
+</ul>

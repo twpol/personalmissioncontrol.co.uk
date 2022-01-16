@@ -13,8 +13,12 @@ namespace app.Auth
         string Authorization { get; init; }
 
         public MicrosoftGraphProvider(IHttpContextAccessor contextAccessor)
+        : this(contextAccessor.HttpContext)
         {
-            var context = contextAccessor.HttpContext;
+        }
+
+        public MicrosoftGraphProvider(HttpContext context)
+        {
             if (context.Items.ContainsKey("AuthenticationProperties"))
             {
                 var auth = context.Items["AuthenticationProperties"] as AuthenticationProperties;
