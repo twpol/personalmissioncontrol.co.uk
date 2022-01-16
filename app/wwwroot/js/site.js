@@ -69,27 +69,27 @@ const apiStatus = new URL(
   location
 );
 
-function setMessageStatus(message, field, value) {
+async function setMessageStatus(message, field, value) {
   if (value === true) value = "True";
   if (value === false) value = "False";
   apiStatus.search = new URLSearchParams([
     ["id", message.dataset.id],
     [field, value],
   ]).toString();
-  fetch(apiStatus, { method: "POST" });
+  await fetch(apiStatus, { method: "POST" });
   message.dataset[field] = value;
   if (field === "flagged" && value) message.dataset.completed = "False";
   if (field === "completed" && value) message.dataset.flagged = "False";
 }
 
-function messageUpdateUnreadScroll() {
+async function messageUpdateUnreadScroll() {
   const currentMessage = document.querySelector("ul.messages > li.current");
   let unread = false;
   for (const message of document.querySelectorAll("ul.messages > li")) {
     if (message === currentMessage) unread = true;
     const messageUnread = message.dataset.unread === "True";
     if (messageUnread !== unread) {
-      setMessageStatus(message, "unread", unread);
+      await setMessageStatus(message, "unread", unread);
     } else if (unread) {
       break;
     }
