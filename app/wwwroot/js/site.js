@@ -5,9 +5,17 @@
     for (const link of frame.contentDocument.querySelectorAll("a[href]")) {
       link.target = "_blank";
     }
-    for (const link of frame.contentDocument.querySelectorAll("img[src]")) {
-      link.referrerPolicy = "no-referrer";
+    for (const image of frame.contentDocument.querySelectorAll("img[src]")) {
+      image.addEventListener("load", seamlessLoaded);
+      image.referrerPolicy = "no-referrer";
     }
+  }
+}
+
+function seamlessLoaded() {
+  seamlessResize();
+  if (document.querySelector("ul.messages")) {
+    messageAutoScroll();
   }
 }
 
@@ -43,7 +51,6 @@ function messageAutoScroll() {
   }
 
   messageHighlightScroll();
-  document.addEventListener("scroll", debounce(messageHighlightScroll));
 }
 
 function messageHighlightScroll() {
@@ -133,6 +140,7 @@ if (document.querySelector("ul.messages")) {
   window.addEventListener("load", function () {
     // Delay scroll by a tiny fraction so we override the browser's build in scroll position restoration
     setTimeout(messageAutoScroll, 100);
+    document.addEventListener("scroll", debounce(messageHighlightScroll));
   });
 
   window.addEventListener("keydown", messageKeyDown);
