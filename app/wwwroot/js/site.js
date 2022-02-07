@@ -1,4 +1,4 @@
-﻿function seamlessResize() {
+function seamlessResize() {
   const frames = document.querySelectorAll("iframe.seamless");
   for (const frame of frames) {
     frame.height = frame.contentDocument.documentElement.offsetHeight;
@@ -32,6 +32,7 @@ function dateTimeLocal() {
 window.addEventListener("load", dateTimeLocal);
 
 const MESSAGE_TOP_OFFSET = 200;
+let messageIsReading = true;
 
 function messageAutoScroll() {
   const offset = document.documentElement.scrollTop;
@@ -90,6 +91,7 @@ async function setMessageStatus(message, field, value) {
 }
 
 async function messageUpdateUnreadScroll() {
+  if (!messageIsReading) return;
   const currentMessage = document.querySelector("ul.messages > li.current");
   let unread = false;
   for (const message of document.querySelectorAll("ul.messages > li")) {
@@ -131,6 +133,12 @@ function messageKeyDown(event) {
         setMessageStatus(currentMessage, "completed", true);
       } else if (completed) {
         setMessageStatus(currentMessage, "flagged", true);
+      }
+      break;
+    case "Pause":
+      messageIsReading = !messageIsReading;
+      if (messageIsReading) {
+        messageAutoScroll();
       }
       break;
   }
