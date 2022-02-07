@@ -1,4 +1,4 @@
-function seamlessResize() {
+﻿function seamlessResize() {
   const frames = document.querySelectorAll("iframe.seamless");
   for (const frame of frames) {
     frame.height = frame.contentDocument.documentElement.offsetHeight;
@@ -32,6 +32,7 @@ function dateTimeLocal() {
 window.addEventListener("load", dateTimeLocal);
 
 const MESSAGE_TOP_OFFSET = 200;
+const messagesSummary = document.createElement("div");
 let messageIsReading = true;
 
 function messageAutoScroll() {
@@ -88,6 +89,7 @@ async function setMessageStatus(message, field, value) {
   message.dataset[field] = value;
   if (field === "flagged" && value) message.dataset.completed = "False";
   if (field === "completed" && value) message.dataset.flagged = "False";
+  messagesUpdateSummary(message);
 }
 
 async function messageUpdateUnreadScroll() {
@@ -144,10 +146,38 @@ function messageKeyDown(event) {
   }
 }
 
+function messagesCreateSummary() {
+  for (const message of document.querySelectorAll("ul.messages > li")) {
+    const messageSummary = document.createElement("div");
+    messageSummary.innerHTML =
+      '<i class="bi bi-envelope-fill text-blue"></i>' +
+      '<i class="bi bi-envelope-open-fill text-grey"></i>' +
+      '<i class="bi bi-flag-fill text-red"></i>' +
+      '<i class="bi bi-flag-fill text-grey"></i>' +
+      '<i class="bi bi-check-circle-fill text-green"></i>' +
+      '<i class="bi bi-check-circle-fill text-grey"></i>';
+    message.dataset.index = messagesSummary.childElementCount;
+    messagesSummary.append(messageSummary);
+    messagesUpdateSummary(message);
+  }
+  messagesSummary.classList.add("messages-summary");
+  document
+    .querySelector("ul.messages")
+    .insertAdjacentElement("afterend", messagesSummary);
+}
+
+function messagesUpdateSummary(message) {
+  const summary = messagesSummary.children[message.dataset.index];
+  for (const name of Object.keys(message.dataset)) {
+    summary.dataset[name] = message.dataset[name];
+  }
+}
+
 if (document.querySelector("ul.messages")) {
   window.addEventListener("load", function () {
     // Delay scroll by a tiny fraction so we override the browser's build in scroll position restoration
     setTimeout(messageAutoScroll, 100);
+    setTimeout(messagesCreateSummary, 100);
     document.addEventListener("scroll", debounce(messageHighlightScroll));
   });
 

@@ -29,3 +29,29 @@
 ul.messages {
   padding-bottom: calc(100vh - 200px);
 }
+
+.messages-summary {
+  position: fixed;
+  top: 50vh;
+  transform: translateY(-50%);
+  margin-left: -1rem;
+}
+
+.messages-summary > * {
+  display: flex;
+}
+
+.messages-summary .text-blue { background: #007bff; }
+.messages-summary .text-green { background: green; }
+.messages-summary .text-grey { background: grey; }
+.messages-summary .text-red { background: red; }
+
+.messages-summary i.bi {
+  display: inline-block;
+  width: 0.25rem;
+  height: 0.25rem;
+}
+
+.messages-summary i.bi:before {
+  display: none;
+}
