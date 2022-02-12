@@ -140,6 +140,7 @@ function messageKeyDown(event) {
       if (messageIsReading) {
         messageAutoScroll();
       }
+      showAlert("info", messageIsReading ? "Reading mode" : "Review mode");
       break;
   }
 }
@@ -180,6 +181,15 @@ if (document.querySelector("ul.messages")) {
   });
 
   window.addEventListener("keydown", messageKeyDown);
+}
+
+function showAlert(type, message) {
+  const alert = document.createElement("div");
+  alert.classList.add("alert", "alert--transient", `alert-${type}`);
+  alert.innerText = message;
+  alert.setAttribute("role", "alert");
+  document.body.append(alert);
+  setTimeout(() => alert.remove(), 5000);
 }
 
 function debounce(delay, callback) {

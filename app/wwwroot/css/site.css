@@ -2,6 +2,13 @@
   font-family: sans-serif;
 }
 
+.alert--transient {
+  left: 50vw;
+  position: fixed;
+  top: 50vh;
+  transform: translate(-50%, -50%);
+}
+
 .logo {
   max-width: 20rem;
   max-height: 20rem;
