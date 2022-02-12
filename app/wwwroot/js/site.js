@@ -69,7 +69,7 @@ function messageHighlightScroll() {
     if (currentMessage) {
       currentMessage.classList.add("current", "border-primary");
     }
-    messageUpdateUnreadScrollDBL();
+    messageUpdateUnreadScrollDB();
   }
 }
 
@@ -107,10 +107,7 @@ async function messageUpdateUnreadScroll() {
   }
 }
 
-const messageUpdateUnreadScrollDBL = debounceLazy(
-  5000,
-  messageUpdateUnreadScroll
-);
+const messageUpdateUnreadScrollDB = debounce(5000, messageUpdateUnreadScroll);
 
 function messageKeyDown(event) {
   const currentMessage = document.querySelector("ul.messages > li.current");
@@ -179,24 +176,13 @@ if (document.querySelector("ul.messages")) {
     // Delay scroll by a tiny fraction so we override the browser's build in scroll position restoration
     setTimeout(messageAutoScroll, 100);
     setTimeout(messagesCreateSummary, 100);
-    document.addEventListener("scroll", debounce(messageHighlightScroll));
+    document.addEventListener("scroll", debounce(100, messageHighlightScroll));
   });
 
   window.addEventListener("keydown", messageKeyDown);
 }
 
-function debounce(callback) {
-  let timeout;
-  return function () {
-    const args = arguments;
-    if (timeout) {
-      window.cancelAnimationFrame(timeout);
-    }
-    timeout = window.requestAnimationFrame(() => callback.apply(this, args));
-  };
-}
-
-function debounceLazy(delay, callback) {
+function debounce(delay, callback) {
   let timeout;
   return function () {
     const args = arguments;
