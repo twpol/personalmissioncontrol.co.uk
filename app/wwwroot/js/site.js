@@ -114,7 +114,8 @@ const messageUpdateUnreadScrollDBL = debounceLazy(
 
 function messageKeyDown(event) {
   const currentMessage = document.querySelector("ul.messages > li.current");
-  if (!currentMessage) return;
+  const flagged = currentMessage?.dataset.flagged === "True";
+  const completed = currentMessage?.dataset.completed === "True";
   const key = [
     event.altKey ? "Alt+" : "",
     event.ctrlKey ? "Control+" : "",
@@ -122,15 +123,15 @@ function messageKeyDown(event) {
     event.metaKey ? "Meta+" : "",
     event.code,
   ].join("");
-  const flagged = currentMessage.dataset.flagged === "True";
-  const completed = currentMessage.dataset.completed === "True";
   switch (key) {
     case "Insert":
+      if (!currentMessage) return;
       if (!completed) {
         setMessageStatus(currentMessage, "flagged", !flagged);
       }
       break;
     case "Control+Insert":
+      if (!currentMessage) return;
       if (flagged) {
         setMessageStatus(currentMessage, "completed", true);
       } else if (completed) {
