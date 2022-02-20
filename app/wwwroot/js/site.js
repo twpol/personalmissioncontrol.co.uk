@@ -126,6 +126,7 @@ function messageKeyDown(event) {
       if (!completed) {
         setMessageStatus(currentMessage, "flagged", !flagged);
       }
+      event.preventDefault();
       break;
     case "Control+Insert":
       if (!currentMessage) return;
@@ -134,6 +135,7 @@ function messageKeyDown(event) {
       } else if (completed) {
         setMessageStatus(currentMessage, "flagged", true);
       }
+      event.preventDefault();
       break;
     case "Pause":
       messageIsReading = !messageIsReading;
@@ -141,6 +143,7 @@ function messageKeyDown(event) {
         messageAutoScroll();
       }
       showAlert("info", messageIsReading ? "Reading mode" : "Review mode");
+      event.preventDefault();
       break;
   }
 }
@@ -201,4 +204,62 @@ function debounce(delay, callback) {
     }
     timeout = window.setTimeout(() => callback.apply(this, args), delay);
   };
+}
+
+if (document.querySelector(".navigation-series")) {
+  const series = Array.from(
+    document.querySelectorAll(".navigation-series a[href]")
+  ).map((element) => element.href);
+  sessionStorage["pmc-navigation-up"] = location.href;
+  sessionStorage["pmc-navigation-series"] = JSON.stringify(series);
+}
+
+const navigationSeries = {
+  up: "",
+  next: "",
+  prev: "",
+};
+
+function navigationSeriesKeyDown(event) {
+  const key = [
+    event.altKey ? "Alt+" : "",
+    event.ctrlKey ? "Control+" : "",
+    event.shiftKey ? "Shift+" : "",
+    event.metaKey ? "Meta+" : "",
+    event.code,
+  ].join("");
+  switch (key) {
+    case "Control+ArrowUp":
+      if (navigationSeries.up) {
+        showAlert("info", "Navigating up...");
+        location = navigationSeries.up;
+      }
+      event.preventDefault();
+      break;
+    case "ArrowLeft":
+      if (navigationSeries.prev) {
+        showAlert("info", "Navigating prev...");
+        location = navigationSeries.prev;
+      }
+      event.preventDefault();
+      break;
+    case "ArrowRight":
+      if (navigationSeries.next) {
+        showAlert("info", "Navigating next...");
+        location = navigationSeries.next;
+      }
+      event.preventDefault();
+      break;
+  }
+}
+
+if (sessionStorage["pmc-navigation-series"]) {
+  const series = JSON.parse(sessionStorage["pmc-navigation-series"]);
+  const index = series.indexOf(location.href);
+  if (index >= 0) {
+    navigationSeries.up = sessionStorage["pmc-navigation-up"];
+    navigationSeries.prev = series[index - 1];
+    navigationSeries.next = series[index + 1];
+    window.addEventListener("keydown", navigationSeriesKeyDown);
+  }
 }

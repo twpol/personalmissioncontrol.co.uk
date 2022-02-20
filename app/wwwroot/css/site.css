@@ -2,6 +2,10 @@
   font-family: sans-serif;
 }
 
+h1 {
+  overflow-wrap: anywhere;
+}
+
 .alert--transient {
   left: 50vw;
   position: fixed;
