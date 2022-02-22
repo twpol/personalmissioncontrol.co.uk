@@ -32,6 +32,8 @@ function dateTimeLocal() {
 window.addEventListener("load", dateTimeLocal);
 
 const MESSAGE_TOP_OFFSET = 200;
+const messagesSummary = document.createElement("div");
+let messageIsReading = true;
 
 function messageAutoScroll() {
   const offset = document.documentElement.scrollTop;
@@ -67,7 +69,7 @@ function messageHighlightScroll() {
     if (currentMessage) {
       currentMessage.classList.add("current", "border-primary");
     }
-    messageUpdateUnreadScrollDBL();
+    messageUpdateUnreadScrollDB();
   }
 }
 
@@ -87,9 +89,11 @@ async function setMessageStatus(message, field, value) {
   message.dataset[field] = value;
   if (field === "flagged" && value) message.dataset.completed = "False";
   if (field === "completed" && value) message.dataset.flagged = "False";
+  messagesUpdateSummary(message);
 }
 
 async function messageUpdateUnreadScroll() {
+  if (!messageIsReading) return;
   const currentMessage = document.querySelector("ul.messages > li.current");
   let unread = false;
   for (const message of document.querySelectorAll("ul.messages > li")) {
@@ -103,14 +107,12 @@ async function messageUpdateUnreadScroll() {
   }
 }
 
-const messageUpdateUnreadScrollDBL = debounceLazy(
-  5000,
-  messageUpdateUnreadScroll
-);
+const messageUpdateUnreadScrollDB = debounce(1000, messageUpdateUnreadScroll);
 
 function messageKeyDown(event) {
   const currentMessage = document.querySelector("ul.messages > li.current");
-  if (!currentMessage) return;
+  const flagged = currentMessage?.dataset.flagged === "True";
+  const completed = currentMessage?.dataset.completed === "True";
   const key = [
     event.altKey ? "Alt+" : "",
     event.ctrlKey ? "Control+" : "",
@@ -118,21 +120,58 @@ function messageKeyDown(event) {
     event.metaKey ? "Meta+" : "",
     event.code,
   ].join("");
-  const flagged = currentMessage.dataset.flagged === "True";
-  const completed = currentMessage.dataset.completed === "True";
   switch (key) {
     case "Insert":
+      if (!currentMessage) return;
       if (!completed) {
         setMessageStatus(currentMessage, "flagged", !flagged);
       }
+      event.preventDefault();
       break;
     case "Control+Insert":
+      if (!currentMessage) return;
       if (flagged) {
         setMessageStatus(currentMessage, "completed", true);
       } else if (completed) {
         setMessageStatus(currentMessage, "flagged", true);
       }
+      event.preventDefault();
       break;
+    case "Pause":
+      messageIsReading = !messageIsReading;
+      if (messageIsReading) {
+        messageAutoScroll();
+      }
+      showAlert("info", messageIsReading ? "Reading mode" : "Review mode");
+      event.preventDefault();
+      break;
+  }
+}
+
+function messagesCreateSummary() {
+  for (const message of document.querySelectorAll("ul.messages > li")) {
+    const messageSummary = document.createElement("div");
+    messageSummary.innerHTML =
+      '<i class="bi bi-envelope-fill text-blue"></i>' +
+      '<i class="bi bi-envelope-open-fill text-grey"></i>' +
+      '<i class="bi bi-flag-fill text-red"></i>' +
+      '<i class="bi bi-flag-fill text-grey"></i>' +
+      '<i class="bi bi-check-circle-fill text-green"></i>' +
+      '<i class="bi bi-check-circle-fill text-grey"></i>';
+    message.dataset.index = messagesSummary.childElementCount;
+    messagesSummary.append(messageSummary);
+    messagesUpdateSummary(message);
+  }
+  messagesSummary.classList.add("messages-summary");
+  document
+    .querySelector("ul.messages")
+    .insertAdjacentElement("afterend", messagesSummary);
+}
+
+function messagesUpdateSummary(message) {
+  const summary = messagesSummary.children[message.dataset.index];
+  for (const name of Object.keys(message.dataset)) {
+    summary.dataset[name] = message.dataset[name];
   }
 }
 
@@ -140,24 +179,23 @@ if (document.querySelector("ul.messages")) {
   window.addEventListener("load", function () {
     // Delay scroll by a tiny fraction so we override the browser's build in scroll position restoration
     setTimeout(messageAutoScroll, 100);
-    document.addEventListener("scroll", debounce(messageHighlightScroll));
+    setTimeout(messagesCreateSummary, 100);
+    document.addEventListener("scroll", debounce(100, messageHighlightScroll));
   });
 
   window.addEventListener("keydown", messageKeyDown);
 }
 
-function debounce(callback) {
-  let timeout;
-  return function () {
-    const args = arguments;
-    if (timeout) {
-      window.cancelAnimationFrame(timeout);
-    }
-    timeout = window.requestAnimationFrame(() => callback.apply(this, args));
-  };
+function showAlert(type, message) {
+  const alert = document.createElement("div");
+  alert.classList.add("alert", "alert--transient", `alert-${type}`);
+  alert.innerText = message;
+  alert.setAttribute("role", "alert");
+  document.body.append(alert);
+  setTimeout(() => alert.remove(), 5000);
 }
 
-function debounceLazy(delay, callback) {
+function debounce(delay, callback) {
   let timeout;
   return function () {
     const args = arguments;
@@ -166,4 +204,62 @@ function debounceLazy(delay, callback) {
     }
     timeout = window.setTimeout(() => callback.apply(this, args), delay);
   };
+}
+
+if (document.querySelector(".navigation-series")) {
+  const series = Array.from(
+    document.querySelectorAll(".navigation-series a[href]")
+  ).map((element) => element.href);
+  sessionStorage["pmc-navigation-up"] = location.href;
+  sessionStorage["pmc-navigation-series"] = JSON.stringify(series);
+}
+
+const navigationSeries = {
+  up: "",
+  next: "",
+  prev: "",
+};
+
+function navigationSeriesKeyDown(event) {
+  const key = [
+    event.altKey ? "Alt+" : "",
+    event.ctrlKey ? "Control+" : "",
+    event.shiftKey ? "Shift+" : "",
+    event.metaKey ? "Meta+" : "",
+    event.code,
+  ].join("");
+  switch (key) {
+    case "Control+ArrowUp":
+      if (navigationSeries.up) {
+        showAlert("info", "Navigating up...");
+        location = navigationSeries.up;
+      }
+      event.preventDefault();
+      break;
+    case "ArrowLeft":
+      if (navigationSeries.prev) {
+        showAlert("info", "Navigating prev...");
+        location = navigationSeries.prev;
+      }
+      event.preventDefault();
+      break;
+    case "ArrowRight":
+      if (navigationSeries.next) {
+        showAlert("info", "Navigating next...");
+        location = navigationSeries.next;
+      }
+      event.preventDefault();
+      break;
+  }
+}
+
+if (sessionStorage["pmc-navigation-series"]) {
+  const series = JSON.parse(sessionStorage["pmc-navigation-series"]);
+  const index = series.indexOf(location.href);
+  if (index >= 0) {
+    navigationSeries.up = sessionStorage["pmc-navigation-up"];
+    navigationSeries.prev = series[index - 1];
+    navigationSeries.next = series[index + 1];
+    window.addEventListener("keydown", navigationSeriesKeyDown);
+  }
 }
