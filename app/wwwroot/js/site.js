@@ -107,7 +107,7 @@ async function messageUpdateUnreadScroll() {
   }
 }
 
-const messageUpdateUnreadScrollDB = debounce(5000, messageUpdateUnreadScroll);
+const messageUpdateUnreadScrollDB = debounce(1000, messageUpdateUnreadScroll);
 
 function messageKeyDown(event) {
   const currentMessage = document.querySelector("ul.messages > li.current");
