@@ -14,3 +14,17 @@
 </nav>
 
 <h1>@Model.List.DisplayName</h1>
+<ul class="list-unstyled">
+    @foreach (var task in Model.Tasks)
+    {
+        <li class="d-flex @task.Classes">
+            @if (task.IsComplete) { <i class="px-1 bi bi-check-circle-fill text-green"></i> } else { <i class="px-1 bi bi-circle text-grey"></i> }
+            @if (task.IsImportant) { <i class="px-1 bi bi-star-fill text-blue"></i> } else { <i class="px-1 bi bi-star text-grey"></i> }
+            <span class="px-1 flex-fill text-truncate">@task.Title</span>
+            @if (task.Completed != null)
+            {
+                <span class="px-1 flex-shrink-0 datetime-local" data-ts="@task.Completed?.ToString("o")"></span>
+            }
+        </li>
+    }
+</ul>
