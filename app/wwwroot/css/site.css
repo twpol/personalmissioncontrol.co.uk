@@ -29,3 +29,13 @@
 ul.messages {
   padding-bottom: calc(100vh - 200px);
 }
+
+.emoji-list-item {
+  list-style: none;
+  position: relative;
+}
+
+.emoji-icon {
+  position: absolute;
+  left: -24px;
+}

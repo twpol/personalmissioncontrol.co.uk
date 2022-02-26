@@ -1,0 +1,16 @@
+@page
+@model app.Pages.Microsoft.Tasks.ListModel
+@{
+    ViewData["Title"] = Model.List.DisplayName + " - Tasks - Microsoft";
+}
+
+<nav aria-label="breadcrumb">
+    <ol class="breadcrumb">
+        <li class="breadcrumb-item"><a asp-area="" asp-page="/Index">Home</a></li>
+        <li class="breadcrumb-item"><a asp-area="" asp-page="/Microsoft/Index">Microsoft</a></li>
+        <li class="breadcrumb-item"><a asp-area="" asp-page="/Microsoft/Tasks/Index">Tasks</a></li>
+        <li class="breadcrumb-item active" aria-current="page">@Model.List.DisplayName</li>
+    </ol>
+</nav>
+
+<h1>@Model.List.DisplayName</h1>
