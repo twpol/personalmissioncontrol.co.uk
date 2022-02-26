@@ -14,17 +14,6 @@
 
 <h1>Microsoft Tasks</h1>
 
-<div id="week-graph"></div>
-
-<script src="~/lib/plotly.min.js" asp-append-version="true"></script>
-<script>
-    Plotly.newPlot("week-graph", [
-        {
-            type: "bar",
-            x: [@Html.Raw(string.Join(",",Model.Weeks.Select(w => $"\"{w.Date.ToString("o")}\"")))],
-            y: [@string.Join(",",Model.Weeks.Select(w => w.Completed))],
-        },
-    ], {
-        responsive: true,
-    })
-</script>
+<ul>
+    <li><a asp-page="/Microsoft/Tasks/Stats">Stats</a></li>
+</ul>
