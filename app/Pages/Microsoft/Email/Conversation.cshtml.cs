@@ -104,7 +104,8 @@ namespace app.Pages.Microsoft.Email
             {
                 get
                 {
-                    return HtmlBodyPrefix + HtmlBody + HtmlBodyPostfix;
+                    // TODO: Replace this with HTML parser
+                    return HtmlBodyPrefix + HtmlBody.Replace("<img src=", "<img data-src=") + HtmlBodyPostfix;
                 }
             }
         }
