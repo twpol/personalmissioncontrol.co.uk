@@ -5,9 +5,13 @@
     for (const link of frame.contentDocument.querySelectorAll("a[href]")) {
       link.target = "_blank";
     }
-    for (const image of frame.contentDocument.querySelectorAll("img[src]")) {
+    for (const image of frame.contentDocument.querySelectorAll(
+      "img[data-src]"
+    )) {
       image.addEventListener("load", seamlessLoaded);
       image.referrerPolicy = "no-referrer";
+      image.src = image.dataset.src;
+      delete image.dataset.src;
     }
   }
 }
