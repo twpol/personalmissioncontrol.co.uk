@@ -1,0 +1,35 @@
+@page
+@model app.Pages.Microsoft.Tasks.IndexModel
+@{
+    ViewData["Title"] = "Tasks - Microsoft";
+}
+
+<nav aria-label="breadcrumb">
+    <ol class="breadcrumb">
+        <li class="breadcrumb-item"><a asp-area="" asp-page="/Index">Home</a></li>
+        <li class="breadcrumb-item"><a asp-area="" asp-page="/Microsoft/Index">Microsoft</a></li>
+        <li class="breadcrumb-item active" aria-current="page">Tasks</li>
+    </ol>
+</nav>
+
+<h1>Microsoft Tasks</h1>
+<ul>
+    @foreach (var list in Model.Lists)
+    {
+        @if (list.NameEmoji.Length > 0)
+        {
+            <li class="emoji-list-item">
+                <a asp-page="/Microsoft/Tasks/List" asp-route-list="@list.Id"><span class="emoji-icon">@list.NameEmoji</span>@list.NameText</a>
+            </li>
+        } else {
+            <li>
+                <a asp-page="/Microsoft/Tasks/List" asp-route-list="@list.Id">@list.NameText</a>
+            </li>
+        }
+    }
+</ul>
+
+<h2>More pages</h2>
+<ul>
+    <li><a asp-page="/Microsoft/Tasks/Stats">Stats</a></li>
+</ul>

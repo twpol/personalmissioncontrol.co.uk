@@ -47,6 +47,7 @@ namespace app
                     options.ClientSecret = Configuration["Authentication:Microsoft:ClientSecret"];
                     options.Scope.Add("Mail.ReadWrite");
                     options.Scope.Add("offline_access");
+                    options.Scope.Add("Tasks.Read");
                     options.SaveTokens = true;
                     options.ForwardAuthenticate = MultipleAuthenticationDefaults.AuthenticationScheme;
                 });

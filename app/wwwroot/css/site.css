@@ -67,3 +67,13 @@ ul.messages {
 .messages-summary i.bi:before {
   display: none;
 }
+
+.emoji-list-item {
+  list-style: none;
+  position: relative;
+}
+
+.emoji-icon {
+  position: absolute;
+  left: -24px;
+}

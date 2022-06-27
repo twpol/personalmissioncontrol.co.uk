@@ -1,0 +1,31 @@
+@page
+@model app.Pages.Microsoft.Tasks.StatsModel
+@{
+    ViewData["Title"] = "Stats - Tasks - Microsoft";
+}
+
+<nav aria-label="breadcrumb">
+    <ol class="breadcrumb">
+        <li class="breadcrumb-item"><a asp-area="" asp-page="/Index">Home</a></li>
+        <li class="breadcrumb-item"><a asp-area="" asp-page="/Microsoft/Index">Microsoft</a></li>
+        <li class="breadcrumb-item"><a asp-area="" asp-page="/Microsoft/Tasks/Index">Tasks</a></li>
+        <li class="breadcrumb-item active" aria-current="page">Tasks</li>
+    </ol>
+</nav>
+
+<h1>Microsoft Tasks Stats</h1>
+
+<div id="week-graph"></div>
+
+<script src="~/lib/plotly.min.js" asp-append-version="true"></script>
+<script>
+    Plotly.newPlot("week-graph", [
+        {
+            type: "bar",
+            x: [@Html.Raw(string.Join(",",Model.Weeks.Select(w => $"\"{w.Date.ToString("o")}\"")))],
+            y: [@string.Join(",",Model.Weeks.Select(w => w.Completed))],
+        },
+    ], {
+        responsive: true,
+    })
+</script>

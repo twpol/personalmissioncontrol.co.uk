@@ -23,6 +23,12 @@
         "font/fonts/bootstrap-icons.woff",
         "font/fonts/bootstrap-icons.woff2"
       ]
+    },
+    {
+      "library": "plotly.js@2.8.3",
+      "files": [
+        "plotly.min.js"
+      ]
     }
   ]
 }

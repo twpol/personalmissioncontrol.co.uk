@@ -31,7 +31,10 @@ namespace app.Auth
 
         public Task AuthenticateRequestAsync(HttpRequestMessage request)
         {
-            if (Authorization.Length > 0) request.Headers.Add("Authorization", Authorization);
+            if (Authorization.Length > 0 && !request.Headers.Contains("Authorization"))
+            {
+                request.Headers.Add("Authorization", Authorization);
+            }
             return Task.CompletedTask;
         }
     }
