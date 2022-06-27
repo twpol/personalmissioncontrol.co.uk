@@ -77,3 +77,7 @@ ul.messages {
   position: absolute;
   left: -24px;
 }
+
+.favourite-this-page {
+  float: right;
+}
