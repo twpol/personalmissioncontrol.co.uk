@@ -82,9 +82,15 @@ namespace app
                 app.UseHsts();
             }
 
-            app.UseResponseHeader("Cache-Control", "public, max-age=604800, immutable");
             app.UseHttpsRedirection();
-            app.UseStaticFiles();
+            app.UseStaticFiles(new StaticFileOptions()
+            {
+                OnPrepareResponse = ctx =>
+                {
+                    var versioned = !string.IsNullOrEmpty(ctx.Context.Request.Query["v"]);
+                    ctx.Context.Response.Headers["Cache-Control"] = versioned ? "public, max-age=604800, immutable" : "public, max-age=1";
+                }
+            });
 
             app.UseResponseHeader("Cache-Control", "private, max-age=1");
             app.UseRouting();
