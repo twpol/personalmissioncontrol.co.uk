@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Globalization;
 using System.Linq;
 using System.Text;
@@ -48,7 +47,6 @@ namespace app.Pages.Microsoft.Tasks
         {
             var runes = text.EnumerateRunes();
             var unicode = runes.Select(rune => Rune.GetUnicodeCategory(rune));
-            Debug.WriteLine($"{text} = {String.Join(" ", runes.Select(rune => rune.Value.ToString("X")))} = {String.Join(" ", unicode)}");
             return runes.Any(rune => rune.Value == 0xFE0F) || unicode.Any(category => category == UnicodeCategory.OtherSymbol);
         }
 
