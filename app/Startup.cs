@@ -88,11 +88,11 @@ namespace app
                 OnPrepareResponse = ctx =>
                 {
                     var versioned = !string.IsNullOrEmpty(ctx.Context.Request.Query["v"]);
-                    ctx.Context.Response.Headers["Cache-Control"] = versioned ? "public, max-age=604800, immutable" : "public, max-age=1";
+                    ctx.Context.Response.Headers["Cache-Control"] = versioned ? "public, max-age=604800, immutable" : "public, no-cache";
                 }
             });
 
-            app.UseResponseHeader("Cache-Control", "private, max-age=1");
+            app.UseResponseHeader("Cache-Control", "private, no-cache");
             app.UseRouting();
 
             app.UseSession();
