@@ -25,12 +25,12 @@ function addToggle() {
   });
   d.toggleIcon.addEventListener("click", onToggle);
   const h1 = document.querySelector("h1");
-  h1.insertAdjacentElement("beforebegin", d.toggleIcon);
+  h1?.insertAdjacentElement("beforebegin", d.toggleIcon);
 
   d.page = {
     link: [location.pathname, location.search].join(""),
     title: document.title.replace(
-      " - " + document.querySelector(".navbar-brand").textContent,
+      " - " + document.querySelector(".navbar-brand")?.textContent,
       ""
     ),
   };
