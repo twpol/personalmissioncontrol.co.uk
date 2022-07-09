@@ -2,18 +2,18 @@
 @model app.Pages.Microsoft.Tasks.ListModel
 @{
     ViewData["Title"] = Model.List.DisplayName + " - Tasks - Microsoft";
+    ViewData["Heading"] = Model.List.DisplayName;
 }
 
-<nav aria-label="breadcrumb">
+@section Breadcrumb {
     <ol class="breadcrumb">
         <li class="breadcrumb-item"><a asp-area="" asp-page="/Index">Home</a></li>
         <li class="breadcrumb-item"><a asp-area="" asp-page="/Microsoft/Index">Microsoft</a></li>
         <li class="breadcrumb-item"><a asp-area="" asp-page="/Microsoft/Tasks/Index">Tasks</a></li>
         <li class="breadcrumb-item active" aria-current="page">@Model.List.DisplayName</li>
     </ol>
-</nav>
+}
 
-<h1>@Model.List.DisplayName</h1>
 <ul class="list-unstyled">
     @foreach (var task in Model.Tasks)
     {

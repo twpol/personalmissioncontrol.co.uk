@@ -2,18 +2,18 @@
 @model app.Pages.Microsoft.Email.ConversationModel
 @{
     ViewData["Title"] = Model.ConversationName + " - E-mail - Microsoft";
+    ViewData["Heading"] = Model.ConversationName;
 }
 
-<nav aria-label="breadcrumb">
+@section Breadcrumb {
     <ol class="breadcrumb">
         <li class="breadcrumb-item"><a asp-area="" asp-page="/Index">Home</a></li>
         <li class="breadcrumb-item"><a asp-area="" asp-page="/Microsoft/Index">Microsoft</a></li>
         <li class="breadcrumb-item"><a asp-area="" asp-page="/Microsoft/Email/Index">E-mail</a></li>
         <li class="breadcrumb-item active" aria-current="page">@Model.ConversationName</li>
     </ol>
-</nav>
+}
 
-<h1>@Model.ConversationName</h1>
 <ul class="list-unstyled messages">
     @foreach (var message in Model.Messages)
     {

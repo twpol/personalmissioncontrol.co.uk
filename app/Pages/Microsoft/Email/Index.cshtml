@@ -2,17 +2,17 @@
 @model app.Pages.Microsoft.Email.IndexModel
 @{
     ViewData["Title"] = "E-mail - Microsoft";
+    ViewData["Heading"] = "Microsoft E-mail";
 }
 
-<nav aria-label="breadcrumb">
+@section Breadcrumb {
     <ol class="breadcrumb">
         <li class="breadcrumb-item"><a asp-area="" asp-page="/Index">Home</a></li>
         <li class="breadcrumb-item"><a asp-area="" asp-page="/Microsoft/Index">Microsoft</a></li>
         <li class="breadcrumb-item active" aria-current="page">E-mail</li>
     </ol>
-</nav>
+}
 
-<h1>Microsoft E-mail</h1>
 <ul>
     @foreach (var folder1 in Model.Folders)
     {
