@@ -1,0 +1,26 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+    <title>@ViewData["Title"] - Personal Mission Control</title>
+    <link rel="stylesheet" href="~/lib/css/bootstrap.min.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/lib/font/bootstrap-icons.min.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
+    @Html.Raw(JavaScriptSnippet.FullScript)
+</head>
+<body>
+    <main role="main">
+        @RenderBody()
+    </main>
+
+    <script src="~/lib/jquery.min.js" asp-append-version="true"></script>
+    <script src="~/lib/js/bootstrap.bundle.min.js" asp-append-version="true"></script>
+    <script src="~/js/pages/_all.js" type="module" asp-append-version="true"></script>
+
+    @RenderSection("Scripts", required: false)
+</body>
+</html>
+@{
+    IgnoreSection("Breadcrumb");
+}

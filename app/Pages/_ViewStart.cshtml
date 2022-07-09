@@ -1,3 +1,6 @@
 ﻿@{
-    Layout = "_Layout";
+    Layout = "_Normal";
+    if (Context.Request.Query["layout"] == "nested") {
+        Layout = "_Nested";
+    }
 }

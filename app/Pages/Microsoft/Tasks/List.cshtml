@@ -1,20 +1,20 @@
-@page
+@page "{handler?}"
 @model app.Pages.Microsoft.Tasks.ListModel
 @{
-    ViewData["Title"] = Model.List.DisplayName + " - Tasks - Microsoft";
+    ViewData["Title"] = Model.Title + " - Tasks - Microsoft";
+    ViewData["Heading"] = Model.Title;
 }
 
-<nav aria-label="breadcrumb">
+@section Breadcrumb {
     <ol class="breadcrumb">
         <li class="breadcrumb-item"><a asp-area="" asp-page="/Index">Home</a></li>
         <li class="breadcrumb-item"><a asp-area="" asp-page="/Microsoft/Index">Microsoft</a></li>
         <li class="breadcrumb-item"><a asp-area="" asp-page="/Microsoft/Tasks/Index">Tasks</a></li>
-        <li class="breadcrumb-item active" aria-current="page">@Model.List.DisplayName</li>
+        <li class="breadcrumb-item active" aria-current="page">@Model.Title</li>
     </ol>
-</nav>
+}
 
-<h1>@Model.List.DisplayName</h1>
-<ul class="list-unstyled">
+<ul class="list-unstyled m-0">
     @foreach (var task in Model.Tasks)
     {
         <li class="d-flex @task.Classes">
@@ -26,5 +26,11 @@
                 <span class="px-1 flex-shrink-0 datetime-local" data-ts="@task.Completed?.ToString("o")"></span>
             }
         </li>
+        @if (Model.Nested && task.NestedTag != null)
+        {
+            <iframe class="seamless ml-5 border-0 w-100" sandbox="allow-same-origin" scrolling="no" src="@task.NestedUrl" height="0"></iframe>
+        }
     }
 </ul>
+
+<script src="~/js/pages/task-list.js" type="module" asp-append-version="true"></script>

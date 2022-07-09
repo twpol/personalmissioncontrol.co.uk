@@ -68,6 +68,10 @@ ul.messages {
   display: none;
 }
 
+ul > iframe.seamless {
+  display: block;
+}
+
 .emoji-list-item {
   list-style: none;
   position: relative;

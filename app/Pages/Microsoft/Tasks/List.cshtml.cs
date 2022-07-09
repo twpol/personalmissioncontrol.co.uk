@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
 using System.Linq;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using app.Auth;
 using Microsoft.Graph;
@@ -12,8 +13,10 @@ namespace app.Pages.Microsoft.Tasks
 {
     public class ListModel : MicrosoftPageModel
     {
+        public string Title;
         public TodoTaskList List;
         public IEnumerable<DisplayTask> Tasks;
+        public bool Nested;
 
         GraphServiceClient Graph;
 
@@ -25,9 +28,44 @@ namespace app.Pages.Microsoft.Tasks
         public async Task OnGet(string list)
         {
             List = await Graph.Me.Todo.Lists[list].Request().GetAsync();
+            Title = List.DisplayName;
             var tasks = await GetAllPages(Graph.Me.Todo.Lists[list].Tasks.Request()
                 .Top(1000));
             Tasks = tasks
+                .Select(task => new DisplayTask(task.Id, task.Title, task.Status ?? TaskStatus.NotStarted, task.Importance ?? Importance.Normal, GetDTO(task.CompletedDateTime)))
+                .OrderBy(task => task.SortKey);
+        }
+
+        public async Task OnGetTree(string list)
+        {
+            Nested = true;
+            await OnGet(list);
+        }
+
+        public async Task OnGetSearch(string text)
+        {
+            Title = text;
+            var tasks = new List<TodoTask>();
+            foreach (var list in await Graph.Me.Todo.Lists.Request().Top(1000).GetAsync())
+            {
+                tasks.AddRange(await GetAllPages(Graph.Me.Todo.Lists[list.Id].Tasks.Request().Filter($"contains(title, '{text}')")));
+            }
+            Tasks = tasks
+                .Select(task => new DisplayTask(task.Id, task.Title, task.Status ?? TaskStatus.NotStarted, task.Importance ?? Importance.Normal, GetDTO(task.CompletedDateTime)))
+                .OrderBy(task => task.SortKey);
+        }
+
+        public async Task OnGetChildren(string hashtag)
+        {
+            Title = $"#{hashtag}";
+            var tasks = new List<TodoTask>();
+            foreach (var list in await Graph.Me.Todo.Lists.Request().Top(1000).GetAsync())
+            {
+                tasks.AddRange(await GetAllPages(Graph.Me.Todo.Lists[list.Id].Tasks.Request().Filter($"contains(title, '%2523{hashtag}')")));
+            }
+            var pattern = new Regex($@". #{hashtag}(?: |$)");
+            Tasks = tasks
+                .Where(task => pattern.IsMatch(task.Title))
                 .Select(task => new DisplayTask(task.Id, task.Title, task.Status ?? TaskStatus.NotStarted, task.Importance ?? Importance.Normal, GetDTO(task.CompletedDateTime)))
                 .OrderBy(task => task.SortKey);
         }
@@ -74,10 +112,12 @@ namespace app.Pages.Microsoft.Tasks
                 { Importance.Low, "3" },
             };
 
-            public string Classes => this.Status == TaskStatus.Completed ? "text-black-50" : "";
-            public bool IsComplete => this.Status == TaskStatus.Completed;
-            public bool IsImportant => this.Importance == Importance.High;
-            public string SortKey => $"{StatusSort[this.Status]}{ImportanceSort[this.Importance]} {this.Title}";
+            public string Classes => Status == TaskStatus.Completed ? "text-black-50" : "";
+            public bool IsComplete => Status == TaskStatus.Completed;
+            public bool IsImportant => Importance == Importance.High;
+            public string SortKey => $"{StatusSort[Status]}{ImportanceSort[Importance]} {Title}";
+            public string NestedTag => Title.StartsWith("#") ? Title.Split(' ')[0].Substring(1) : null;
+            public string NestedUrl => $"/Microsoft/Tasks/List/Children?hashtag={NestedTag}&layout=nested";
         }
     }
 }

@@ -30,9 +30,13 @@
                 </div>
             </div>
         </nav>
+        <nav class="container" aria-label="breadcrumb">
+            @RenderSection("Breadcrumb", required: false)
+        </nav>
     </header>
     <div class="container">
         <main role="main">
+            <h1>@(ViewData["Heading"] ?? ViewData["Title"])</h1>
             @RenderBody()
         </main>
     </div>
