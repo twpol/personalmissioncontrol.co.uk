@@ -1,0 +1,17 @@
+@page
+@model app.Pages.Exist.IndexModel
+@{
+    ViewData["Title"] = "Exist";
+    ViewData["Heading"] = "Exist Services";
+}
+
+@section Breadcrumb {
+    <ol class="breadcrumb">
+        <li class="breadcrumb-item"><a asp-area="" asp-page="/Index">Home</a></li>
+        <li class="breadcrumb-item active" aria-current="page">Exist</li>
+    </ol>
+}
+
+<p>
+    Logged in as @Model.UserName (@Model.UserID)
+</p>

@@ -1,7 +1,9 @@
 using System;
+using System.Security.Claims;
 using app.Auth;
 using app.Services;
 using app.Services.Data;
+using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.MicrosoftAccount;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Builder;
@@ -67,6 +69,22 @@ namespace app
             services
                 .AddAuthentication(MultipleAuthenticationDefaults.AuthenticationScheme)
                 .AddMultiple()
+                .AddOAuthWithUser("Exist", options =>
+                {
+                    options.ClientId = Configuration["Authentication:Exist:ClientId"];
+                    options.ClientSecret = Configuration["Authentication:Exist:ClientSecret"];
+                    options.AuthorizationEndpoint = "https://exist.io/oauth2/authorize";
+                    options.TokenEndpoint = "https://exist.io/oauth2/access_token";
+                    options.UserInformationEndpoint = "https://exist.io/api/1/users/$self/profile/";
+                    options.Scope.Add("read");
+                    options.CallbackPath = "/signin-exist";
+                    options.SaveTokens = true;
+                    options.ClaimActions.MapJsonKey(ClaimTypes.NameIdentifier, "id");
+                    options.ClaimActions.MapJsonKey(ClaimTypes.Name, "username");
+                    options.ClaimActions.MapJsonKey(ClaimTypes.GivenName, "first_name");
+                    options.ClaimActions.MapJsonKey(ClaimTypes.Surname, "last_name");
+                    options.ForwardAuthenticate = MultipleAuthenticationDefaults.AuthenticationScheme;
+                })
                 .AddMicrosoftAccount("Microsoft", options =>
                 {
                     options.ClientId = Configuration["Authentication:Microsoft:ClientId"];
@@ -80,6 +98,7 @@ namespace app
 
             services.AddAuthorization(options =>
             {
+                options.AddPolicy("Exist", policy => policy.AddAuthenticationSchemes("Exist").AddRequirements(new MultipleAuthenticationRequirement("Exist")));
                 options.AddPolicy("Microsoft", policy => policy.AddAuthenticationSchemes("Microsoft").AddRequirements(new MultipleAuthenticationRequirement("Microsoft")));
             });
 
