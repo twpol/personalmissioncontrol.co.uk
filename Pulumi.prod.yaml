@@ -1,5 +1,8 @@
 config:
   azure-native:location: UKSouth
+  personalmissioncontrol.co.uk:exist-client-id: 4e4ef4bb794a0d7c4276
+  personalmissioncontrol.co.uk:exist-client-secret:
+    secure: AAABAGbghyDiM/+a9CjQPIWgu6KGw1WjYr1jFTCLmhhugNNiLhKs7Pn1TogIu0QxLFThNN4kHxnHq4LTMptFqFN14npbWPrp
   personalmissioncontrol.co.uk:domain: www.personalmissioncontrol.co.uk
   personalmissioncontrol.co.uk:honeycomb-apikey:
     secure: AAABAPlDtYD1rsWUaIENgdquulMOkgjS16m+gPBxrbCRhtP1uGqMwBdf7j9oeUONirgBLxVP
