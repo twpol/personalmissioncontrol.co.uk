@@ -31,6 +31,12 @@ namespace app.Auth
         public static AuthenticationBuilder AddMultiple(this AuthenticationBuilder builder, Action<MultipleAuthenticationOptions> configureOptions) => builder.AddMultiple(MultipleAuthenticationDefaults.AuthenticationScheme, configureOptions);
         public static AuthenticationBuilder AddMultiple(this AuthenticationBuilder builder, string authenticationScheme, Action<MultipleAuthenticationOptions> configureOptions) => builder.AddMultiple(authenticationScheme, MultipleAuthenticationDefaults.DisplayName, configureOptions);
         public static AuthenticationBuilder AddMultiple(this AuthenticationBuilder builder, string authenticationScheme, string displayName, Action<MultipleAuthenticationOptions> configureOptions) => builder.AddScheme<MultipleAuthenticationOptions, MultipleAuthenticationHandler>(authenticationScheme, displayName, configureOptions);
+        public static bool TryGetIdentity(this HttpContext context, string scheme, [NotNullWhen(true)] out ClaimsIdentity? value)
+        {
+            value = context.User.Identities.FirstOrDefault(id => id.AuthenticationType == scheme);
+            return value != null;
+        }
+        public static string? FindFirstValue(this ClaimsIdentity identity, string type) => identity.FindFirst(type)?.Value;
     }
 
     public class MultipleAuthenticationOptions : AuthenticationSchemeOptions

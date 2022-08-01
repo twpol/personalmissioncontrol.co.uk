@@ -1,26 +1,24 @@
-using System.Threading.Tasks;
+using System.Security.Claims;
 using app.Auth;
-using Microsoft.Graph;
 
 namespace app.Pages.Microsoft
 {
     public class IndexModel : MicrosoftPageModel
     {
+        public string UserID { get; set; } = null!;
         public string UserName { get; set; } = null!;
-        public string UserEmail { get; set; } = null!;
 
-        GraphServiceClient Graph;
-
-        public IndexModel(MicrosoftGraphProvider graphProvider)
+        public IndexModel()
         {
-            Graph = graphProvider.Client;
         }
 
-        public async Task OnGet()
+        public void OnGet()
         {
-            var user = await Graph.Me.Request().GetAsync();
-            UserName = user.DisplayName;
-            UserEmail = user.UserPrincipalName;
+            if (HttpContext.TryGetIdentity("Microsoft", out var identity))
+            {
+                UserID = identity.FindFirstValue(ClaimTypes.NameIdentifier) ?? "";
+                UserName = identity.FindFirstValue(ClaimTypes.Name) ?? "";
+            }
         }
     }
 }
