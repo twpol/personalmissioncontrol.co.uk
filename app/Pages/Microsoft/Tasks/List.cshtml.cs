@@ -45,10 +45,12 @@ namespace app.Pages.Microsoft.Tasks
         public async Task OnGetSearch(string text)
         {
             Title = text;
+            Nested = HttpContext.Request.Query["layout"] == "nested";
+
             var tasks = new List<TodoTask>();
             foreach (var list in await Graph.Me.Todo.Lists.Request().Top(1000).GetAsync())
             {
-                tasks.AddRange(await GetAllPages(Graph.Me.Todo.Lists[list.Id].Tasks.Request().Filter($"contains(title, '{text}')")));
+                tasks.AddRange(await GetAllPages(Graph.Me.Todo.Lists[list.Id].Tasks.Request().Filter($"contains(title, '{Uri.EscapeDataString(Uri.EscapeDataString(text))}')")));
             }
             Tasks = tasks
                 .Select(task => new DisplayTask(task.Id, task.Title, task.Status ?? TaskStatus.NotStarted, task.Importance ?? Importance.Normal, GetDTO(task.CompletedDateTime)))
@@ -58,10 +60,12 @@ namespace app.Pages.Microsoft.Tasks
         public async Task OnGetChildren(string hashtag)
         {
             Title = $"#{hashtag}";
+            Nested = HttpContext.Request.Query["layout"] == "nested";
+
             var tasks = new List<TodoTask>();
             foreach (var list in await Graph.Me.Todo.Lists.Request().Top(1000).GetAsync())
             {
-                tasks.AddRange(await GetAllPages(Graph.Me.Todo.Lists[list.Id].Tasks.Request().Filter($"contains(title, '%2523{hashtag}')")));
+                tasks.AddRange(await GetAllPages(Graph.Me.Todo.Lists[list.Id].Tasks.Request().Filter($"contains(title, '{Uri.EscapeDataString(Uri.EscapeDataString(Title))}')")));
             }
             var pattern = new Regex($@". #{hashtag}(?: |$)");
             Tasks = tasks
@@ -112,8 +116,8 @@ namespace app.Pages.Microsoft.Tasks
                 { Importance.Low, "3" },
             };
 
-            public string Classes => Status == TaskStatus.Completed ? "text-black-50" : "";
-            public bool IsComplete => Status == TaskStatus.Completed;
+            public string Classes => "task " + (IsCompleted ? "task--completed text-black-50" : "task--uncompleted") + " " + (IsImportant ? "task--important" : "task--unimportant");
+            public bool IsCompleted => Status == TaskStatus.Completed;
             public bool IsImportant => Importance == Importance.High;
             public string SortKey => $"{StatusSort[Status]}{ImportanceSort[Importance]} {Title}";
             public string NestedTag => Title.StartsWith("#") ? Title.Split(' ')[0].Substring(1) : null;

@@ -85,3 +85,11 @@ ul > iframe.seamless {
 .favourite-this-page {
   float: right;
 }
+
+.tasks-show-completed:not(:has(:checked)) ~ .tasks .task--completed {
+  display: none;
+}
+
+.tasks-show-unimportant:not(:has(:checked)) ~ .tasks .task--unimportant:not(:has(> .task__children)) {
+  display: none;
+}
