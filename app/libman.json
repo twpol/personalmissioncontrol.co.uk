@@ -29,6 +29,12 @@
       "files": [
         "plotly.min.js"
       ]
+    },
+    {
+      "library": "htmx@1.8.0",
+      "files": [
+        "htmx.min.js"
+      ]
     }
   ]
 }
