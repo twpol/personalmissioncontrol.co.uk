@@ -14,7 +14,7 @@
     </ol>
 }
 
-<ul class="list-unstyled m-0">
+<ul class="tasks list-unstyled m-0">
     @foreach (var task in Model.Tasks)
     {
         <li class="d-flex @task.Classes">
@@ -28,7 +28,9 @@
         </li>
         @if (Model.Nested && task.NestedTag != null)
         {
-            <iframe class="seamless ml-5 border-0 w-100" sandbox="allow-same-origin" scrolling="no" src="@task.NestedUrl" height="0"></iframe>
+            <div hx-get="@task.NestedUrl" hx-trigger="load" hx-select=".tasks" class="ml-5">
+                <div class="w-50 bg-light rounded-pill">&nbsp;</div>
+            </div>
         }
     }
 </ul>
