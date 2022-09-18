@@ -86,6 +86,10 @@ ul > iframe.seamless {
   float: right;
 }
 
-.tasks-show-completed:not(:has(:checked)) + .tasks :is(.task--completed, .task--completed + .task-children) {
-  display: none !important;
+.tasks-show-completed:not(:has(:checked)) ~ .tasks .task--completed {
+  display: none;
+}
+
+.tasks-show-unimportant:not(:has(:checked)) ~ .tasks .task--unimportant:not(:has(> .task__children)) {
+  display: none;
 }

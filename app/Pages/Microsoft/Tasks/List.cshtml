@@ -14,26 +14,29 @@
     </ol>
 }
 
-<label class="tasks-show-completed"><input type="checkbox"> Show completed tasks</label>
+<label class="tasks-show-completed mr-3"><input type="checkbox"> Show completed tasks</label>
+<label class="tasks-show-unimportant mr-3"><input type="checkbox"> Show unimportant tasks</label>
 
 <ul class="tasks list-unstyled m-0">
     @foreach (var task in Model.Tasks)
     {
-        <li class="d-flex @task.Classes">
-            @if (task.IsCompleted) { <i class="px-1 bi bi-check-circle-fill text-green"></i> } else { <i class="px-1 bi bi-circle text-grey"></i> }
-            @if (task.IsImportant) { <i class="px-1 bi bi-star-fill text-blue"></i> } else { <i class="px-1 bi bi-star text-grey"></i> }
-            <span class="px-1 flex-fill text-truncate">@task.Title</span>
-            @if (task.Completed != null)
+        <li class="@task.Classes">
+            <div class="task__item d-flex">
+                @if (task.IsCompleted) { <i class="px-1 bi bi-check-circle-fill text-green"></i> } else { <i class="px-1 bi bi-circle text-grey"></i> }
+                @if (task.IsImportant) { <i class="px-1 bi bi-star-fill text-blue"></i> } else { <i class="px-1 bi bi-star text-grey"></i> }
+                <span class="px-1 flex-fill text-truncate">@task.Title</span>
+                @if (task.Completed != null)
+                {
+                    <span class="px-1 flex-shrink-0 datetime-local" data-ts="@task.Completed?.ToString("o")"></span>
+                }
+            </div>
+            @if (Model.Nested && task.NestedTag != null)
             {
-                <span class="px-1 flex-shrink-0 datetime-local" data-ts="@task.Completed?.ToString("o")"></span>
+                <div hx-get="@task.NestedUrl" hx-trigger="load" hx-select=".tasks" class="task__children ml-5">
+                    <div class="w-50 bg-light rounded-pill">&nbsp;</div>
+                </div>
             }
         </li>
-        @if (Model.Nested && task.NestedTag != null)
-        {
-            <div hx-get="@task.NestedUrl" hx-trigger="load" hx-select=".tasks" class="task-children ml-5">
-                <div class="w-50 bg-light rounded-pill">&nbsp;</div>
-            </div>
-        }
     }
 </ul>
 

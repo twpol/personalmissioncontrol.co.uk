@@ -116,7 +116,7 @@ namespace app.Pages.Microsoft.Tasks
                 { Importance.Low, "3" },
             };
 
-            public string Classes => IsCompleted ? "task task--completed text-black-50" : "task";
+            public string Classes => "task " + (IsCompleted ? "task--completed text-black-50" : "task--uncompleted") + " " + (IsImportant ? "task--important" : "task--unimportant");
             public bool IsCompleted => Status == TaskStatus.Completed;
             public bool IsImportant => Importance == Importance.High;
             public string SortKey => $"{StatusSort[Status]}{ImportanceSort[Importance]} {Title}";
