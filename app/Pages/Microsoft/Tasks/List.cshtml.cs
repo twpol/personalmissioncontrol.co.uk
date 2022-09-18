@@ -116,8 +116,8 @@ namespace app.Pages.Microsoft.Tasks
                 { Importance.Low, "3" },
             };
 
-            public string Classes => Status == TaskStatus.Completed ? "task task--completed text-black-50" : "task";
-            public bool IsComplete => Status == TaskStatus.Completed;
+            public string Classes => IsCompleted ? "task task--completed text-black-50" : "task";
+            public bool IsCompleted => Status == TaskStatus.Completed;
             public bool IsImportant => Importance == Importance.High;
             public string SortKey => $"{StatusSort[Status]}{ImportanceSort[Importance]} {Title}";
             public string NestedTag => Title.StartsWith("#") ? Title.Split(' ')[0].Substring(1) : null;
