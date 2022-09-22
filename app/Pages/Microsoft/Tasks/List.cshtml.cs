@@ -1,13 +1,11 @@
-using System;
 using System.Collections.Generic;
-using System.Globalization;
-using System.IO;
 using System.Linq;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using app.Auth;
+using app.Data;
+using app.Services.Data;
 using Microsoft.Graph;
-using TaskStatus = Microsoft.Graph.TaskStatus;
 
 namespace app.Pages.Microsoft.Tasks
 {
@@ -19,21 +17,19 @@ namespace app.Pages.Microsoft.Tasks
         public bool Nested;
 
         GraphServiceClient Graph;
+        MicrosoftData Data;
 
-        public ListModel(MicrosoftGraphProvider graphProvider)
+        public ListModel(MicrosoftGraphProvider graphProvider, MicrosoftData data)
         {
             Graph = graphProvider.Client;
+            Data = data;
         }
 
         public async Task OnGet(string list)
         {
             List = await Graph.Me.Todo.Lists[list].Request().GetAsync();
             Title = List.DisplayName;
-            var tasks = await GetAllPages(Graph.Me.Todo.Lists[list].Tasks.Request()
-                .Top(1000));
-            Tasks = tasks
-                .Select(task => new DisplayTask(task.Id, task.Title, task.Status ?? TaskStatus.NotStarted, task.Importance ?? Importance.Normal, GetDTO(task.CompletedDateTime)))
-                .OrderBy(task => task.SortKey);
+            Tasks = await Data.GetTasks(list);
         }
 
         public async Task OnGetTree(string list)
@@ -47,14 +43,12 @@ namespace app.Pages.Microsoft.Tasks
             Title = text;
             Nested = HttpContext.Request.Query["layout"] == "nested";
 
-            var tasks = new List<TodoTask>();
-            foreach (var list in await Graph.Me.Todo.Lists.Request().Top(1000).GetAsync())
+            var tasks = new List<DisplayTask>();
+            foreach (var list in await Data.GetLists())
             {
-                tasks.AddRange(await GetAllPages(Graph.Me.Todo.Lists[list.Id].Tasks.Request().Filter($"contains(title, '{Uri.EscapeDataString(Uri.EscapeDataString(text))}')")));
+                tasks.AddRange((await Data.GetTasks(list.Id)).Where(task => task.Title.Contains(text)));
             }
-            Tasks = tasks
-                .Select(task => new DisplayTask(task.Id, task.Title, task.Status ?? TaskStatus.NotStarted, task.Importance ?? Importance.Normal, GetDTO(task.CompletedDateTime)))
-                .OrderBy(task => task.SortKey);
+            Tasks = tasks.OrderBy(task => task.SortKey);
         }
 
         public async Task OnGetChildren(string hashtag)
@@ -62,66 +56,13 @@ namespace app.Pages.Microsoft.Tasks
             Title = $"#{hashtag}";
             Nested = HttpContext.Request.Query["layout"] == "nested";
 
-            var tasks = new List<TodoTask>();
-            foreach (var list in await Graph.Me.Todo.Lists.Request().Top(1000).GetAsync())
+            var tasks = new List<DisplayTask>();
+            foreach (var list in await Data.GetLists())
             {
-                tasks.AddRange(await GetAllPages(Graph.Me.Todo.Lists[list.Id].Tasks.Request().Filter($"contains(title, '{Uri.EscapeDataString(Uri.EscapeDataString(Title))}')")));
+                tasks.AddRange((await Data.GetTasks(list.Id)).Where(task => task.Title.Contains(Title)));
             }
             var pattern = new Regex($@". #{hashtag}(?: |$)");
-            Tasks = tasks
-                .Where(task => pattern.IsMatch(task.Title))
-                .Select(task => new DisplayTask(task.Id, task.Title, task.Status ?? TaskStatus.NotStarted, task.Importance ?? Importance.Normal, GetDTO(task.CompletedDateTime)))
-                .OrderBy(task => task.SortKey);
-        }
-
-        async Task<IList<TodoTask>> GetAllPages(ITodoTaskListTasksCollectionRequest request)
-        {
-            var list = new List<TodoTask>();
-            do
-            {
-                var task = await request.GetAsync();
-                list.AddRange(task);
-                request = task.NextPageRequest;
-            } while (request != null);
-            return list;
-        }
-
-        DateTimeOffset? GetDTO(DateTimeTimeZone dateTimeTimeZone)
-        {
-            if (dateTimeTimeZone == null) return null;
-            switch (dateTimeTimeZone.TimeZone)
-            {
-                case "UTC":
-                    return DateTimeOffset.ParseExact(dateTimeTimeZone.DateTime + "Z", "o", CultureInfo.InvariantCulture);
-                default:
-                    throw new InvalidDataException($"Unknown time zone: {dateTimeTimeZone.TimeZone}");
-            }
-        }
-
-        public record DisplayTask(string Id, string Title, TaskStatus Status, Importance Importance, DateTimeOffset? Completed)
-        {
-            static Dictionary<TaskStatus, string> StatusSort = new()
-            {
-                { TaskStatus.NotStarted, "1" },
-                { TaskStatus.InProgress, "2" },
-                { TaskStatus.Completed, "3" },
-                { TaskStatus.WaitingOnOthers, "4" },
-                { TaskStatus.Deferred, "5" },
-            };
-
-            static Dictionary<Importance, string> ImportanceSort = new()
-            {
-                { Importance.High, "1" },
-                { Importance.Normal, "2" },
-                { Importance.Low, "3" },
-            };
-
-            public string Classes => "task " + (IsCompleted ? "task--completed text-black-50" : "task--uncompleted") + " " + (IsImportant ? "task--important" : "task--unimportant");
-            public bool IsCompleted => Status == TaskStatus.Completed;
-            public bool IsImportant => Importance == Importance.High;
-            public string SortKey => $"{StatusSort[Status]}{ImportanceSort[Importance]} {Title}";
-            public string NestedTag => Title.StartsWith("#") ? Title.Split(' ')[0].Substring(1) : null;
-            public string NestedUrl => $"/Microsoft/Tasks/List/Children?hashtag={NestedTag}&layout=nested";
+            Tasks = tasks.Where(task => pattern.IsMatch(task.Title)).OrderBy(task => task.SortKey);
         }
     }
 }
