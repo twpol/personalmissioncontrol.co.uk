@@ -1,3 +1,4 @@
+using System;
 using app.Auth;
 using app.Services.Data;
 using Microsoft.AspNetCore.Authorization;
@@ -7,6 +8,8 @@ using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using OpenTelemetry.Trace;
+using OpenTelemetry.Resources;
 
 namespace app
 {
@@ -23,6 +26,16 @@ namespace app
         public void ConfigureServices(IServiceCollection services)
         {
             services.AddApplicationInsightsTelemetry();
+            services.AddOpenTelemetryTracing(builder => builder
+                .SetResourceBuilder(ResourceBuilder.CreateDefault().AddService("pmc"))
+                .AddAspNetCoreInstrumentation()
+                .AddHttpClientInstrumentation()
+                .AddOtlpExporter(options =>
+                {
+                    options.Endpoint = new Uri("https://api.honeycomb.io");
+                    options.Headers = $"x-honeycomb-team={Configuration["Instrumentation:Honeycomb:ApiKey"]}";
+                })
+            );
 
             services.Configure<ForwardedHeadersOptions>(options =>
             {

@@ -149,6 +149,7 @@ class Program
                         new() { Name = "APPINSIGHTS_INSTRUMENTATIONKEY", Value = appInsight.InstrumentationKey },
                         new() { Name = "Authentication__Microsoft__ClientId", Value = appReg.ApplicationId },
                         new() { Name = "Authentication__Microsoft__ClientSecret", Value = appRegSecret.Value },
+                        new() { Name = "Instrumentation__Honeycomb__ApiKey", Value = config.RequireSecret("honeycomb-apikey") },
                     },
                 },
                 HttpsOnly = true,

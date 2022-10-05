@@ -1,3 +1,5 @@
 config:
   azure-native:location: UKSouth
   personalmissioncontrol.co.uk:domain: dev.personalmissioncontrol.co.uk
+  personalmissioncontrol.co.uk:honeycomb-apikey:
+    secure: AAABAJ/9z97NrXQxsaBQUB0Y7HzZls7nVHj/r/IvgAII4WNNQjZNolFZNNTzm7xgT4w4aWj+NQ==
