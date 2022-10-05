@@ -48,7 +48,7 @@ class Program
                 ResourceGroupName = resourceGroup.Name,
                 AccountName = storageAccount.Name,
                 ContainerName = storageContainer.Name,
-                Source = new FileArchive("./app/bin/Debug/net5.0/publish"),
+                Source = new FileArchive("./app/bin/Debug/net6.0/publish"),
             });
             var appBlobUrl = SignedBlobReadUrl(appBlob, storageContainer, storageAccount, resourceGroup);
 
