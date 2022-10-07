@@ -4,6 +4,7 @@ using app.Services.Data;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -48,8 +49,11 @@ namespace app
 
             services.AddSession(options =>
             {
+                options.IdleTimeout = TimeSpan.FromDays(7);
                 options.Cookie.Name = "SessionId";
                 options.Cookie.IsEssential = true;
+                options.Cookie.SecurePolicy = CookieSecurePolicy.Always;
+                options.Cookie.MaxAge = options.IdleTimeout;
             });
 
             services

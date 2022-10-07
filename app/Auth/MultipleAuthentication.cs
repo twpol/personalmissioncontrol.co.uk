@@ -27,6 +27,12 @@ namespace app.Auth
         public static AuthenticationBuilder AddMultiple(this AuthenticationBuilder builder, Action<MultipleAuthenticationOptions> configureOptions) => builder.AddMultiple(MultipleAuthenticationDefaults.AuthenticationScheme, configureOptions);
         public static AuthenticationBuilder AddMultiple(this AuthenticationBuilder builder, string authenticationScheme, Action<MultipleAuthenticationOptions> configureOptions) => builder.AddMultiple(authenticationScheme, MultipleAuthenticationDefaults.DisplayName, configureOptions);
         public static AuthenticationBuilder AddMultiple(this AuthenticationBuilder builder, string authenticationScheme, string displayName, Action<MultipleAuthenticationOptions> configureOptions) => builder.AddScheme<MultipleAuthenticationOptions, MultipleAuthenticationHandler>(authenticationScheme, displayName, configureOptions);
+
+        public static bool TryGetAuthenticationProperties(this HttpContext context, out AuthenticationProperties value)
+        {
+            value = context.Features.Get<AuthenticationProperties>();
+            return value != null;
+        }
     }
 
     public class MultipleAuthenticationOptions : AuthenticationSchemeOptions
@@ -116,7 +122,7 @@ namespace app.Auth
                         if (httpContext.Session.TryGetValue($"multiple-authentication-properties-{Scheme}", out var propertiesData))
                         {
                             var json = JsonSerializer.Deserialize<AuthenticationPropertiesJson>(propertiesData);
-                            httpContext.Items["AuthenticationProperties"] = new AuthenticationProperties(json.Items);
+                            httpContext.Features.Set(new AuthenticationProperties(json.Items));
                         }
                     }
                 }
@@ -124,7 +130,6 @@ namespace app.Auth
 
             return Task.CompletedTask;
         }
-
     }
 
     record AuthenticationPropertiesJson(IDictionary<string, string> Items);
