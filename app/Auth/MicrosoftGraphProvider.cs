@@ -1,3 +1,4 @@
+using app.Auth;
 using System.Net.Http;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Authentication;
@@ -19,9 +20,8 @@ namespace app.Auth
 
         public MicrosoftGraphProvider(HttpContext context)
         {
-            if (context.Items.ContainsKey("AuthenticationProperties"))
+            if (context.TryGetAuthenticationProperties(out var auth))
             {
-                var auth = context.Items["AuthenticationProperties"] as AuthenticationProperties;
                 var type = auth.GetTokenValue("token_type");
                 var token = auth.GetTokenValue("access_token");
                 Authorization = $"{type} {token}";
