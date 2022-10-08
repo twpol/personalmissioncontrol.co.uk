@@ -1,0 +1,32 @@
+@model app.Pages.Microsoft.Email.FolderModel.DisplayConversation
+
+<li class="d-flex">
+    @if (Model.Unread)
+    {
+        <i class="px-1 bi bi-envelope-fill text-blue"></i>
+    }
+    else
+    {
+        <i class="px-1 bi bi-envelope-open-fill text-grey"></i>
+    }
+    @if (Model.Flagged)
+    {
+        <i class="px-1 bi bi-flag-fill text-red"></i>
+    }
+    else
+    {
+        <i class="px-1 bi bi-flag-fill text-grey"></i>
+    }
+    @if (Model.Completed)
+    {
+        <i class="px-1 bi bi-check-circle-fill text-green"></i>
+    }
+    else
+    {
+        <i class="px-1 bi bi-check-circle-fill text-grey"></i>
+    }
+    <a class="px-1 flex-fill text-truncate" asp-page="/Microsoft/Email/Conversation" asp-route-conversation="@Model.Id">
+        @Model.Name
+    </a>
+    <span class="px-1 flex-shrink-0 datetime-local" data-ts="@Model.Date.ToString("o")"></span>
+</li>

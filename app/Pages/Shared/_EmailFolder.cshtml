@@ -1,0 +1,11 @@
+@model app.Pages.Microsoft.Email.IndexModel.DisplayFolder
+
+<li>
+    <a asp-page="/Microsoft/Email/Folder" asp-route-folder="@Model.Id">@Model.Name</a>
+    <ul>
+        @foreach (var folder in Model.Children)
+        {
+            @await Html.PartialAsync("_EmailFolder", folder)
+        }
+    </ul>
+</li>
