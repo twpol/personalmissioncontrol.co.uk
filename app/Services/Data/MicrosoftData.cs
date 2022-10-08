@@ -27,6 +27,7 @@ namespace app.Services.Data
 
         public async Task<IList<TodoTaskList>> GetLists()
         {
+            if (Graph == null) return new TodoTaskList[0];
             return await GetOrCreateAsync("tasks:lists", async () =>
                 await Graph.Me.Todo.Lists.Request().Top(1000).GetAsync()
             );
@@ -34,6 +35,7 @@ namespace app.Services.Data
 
         public async Task<IList<DisplayTask>> GetTasks(string list)
         {
+            if (Graph == null) return new DisplayTask[0];
             return await GetOrCreateAsync($"tasks:list:{list}", async () =>
             {
                 return (await GetAllPages(Graph.Me.Todo.Lists[list].Tasks.Request().Top(1000)))

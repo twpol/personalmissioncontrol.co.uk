@@ -1,22 +1,36 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using System.Collections.Generic;
+using System.Linq;
+using System.Threading.Tasks;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.Extensions.Logging;
+using app.Data;
+using app.Services.Data;
 
 namespace app.Pages
 {
     [ResponseCache(Duration = 1, Location = ResponseCacheLocation.Client)]
     public class IndexModel : PageModel
     {
-        private readonly ILogger<IndexModel> _logger;
+        public IEnumerable<DisplayTask> Tasks;
 
-        public IndexModel(ILogger<IndexModel> logger)
+        private readonly ILogger<IndexModel> _logger;
+        private readonly MicrosoftData _data;
+
+        public IndexModel(ILogger<IndexModel> logger, MicrosoftData data)
         {
             _logger = logger;
+            _data = data;
         }
 
-        public void OnGet()
+        public async Task OnGet()
         {
-
+            var tasks = new List<DisplayTask>();
+            foreach (var list in await _data.GetLists())
+            {
+                tasks.AddRange((await _data.GetTasks(list.Id)).Where(task => task.IsImportant && !task.IsCompleted));
+            }
+            Tasks = tasks.OrderBy(task => task.SortKey);
         }
     }
 }
