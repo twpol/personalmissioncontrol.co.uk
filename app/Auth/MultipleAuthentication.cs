@@ -28,10 +28,16 @@ namespace app.Auth
         public static AuthenticationBuilder AddMultiple(this AuthenticationBuilder builder, string authenticationScheme, Action<MultipleAuthenticationOptions> configureOptions) => builder.AddMultiple(authenticationScheme, MultipleAuthenticationDefaults.DisplayName, configureOptions);
         public static AuthenticationBuilder AddMultiple(this AuthenticationBuilder builder, string authenticationScheme, string displayName, Action<MultipleAuthenticationOptions> configureOptions) => builder.AddScheme<MultipleAuthenticationOptions, MultipleAuthenticationHandler>(authenticationScheme, displayName, configureOptions);
 
-        public static bool TryGetAuthenticationProperties(this HttpContext context, out AuthenticationProperties value)
+        public static bool TryGetMultipleAuthentication(this HttpContext context, string scheme, out AuthenticationProperties value)
         {
-            value = context.Features.Get<AuthenticationProperties>();
-            return value != null;
+            if (context.Session.TryGetValue($"multiple-authentication-properties-{scheme}", out var propertiesData))
+            {
+                var json = JsonSerializer.Deserialize<AuthenticationPropertiesJson>(propertiesData);
+                value = new AuthenticationProperties(json.Items);
+                return true;
+            }
+            value = null;
+            return false;
         }
     }
 
@@ -117,14 +123,6 @@ namespace app.Auth
                 if (requirement is MultipleAuthenticationRequirement mar && context.User.Identities.Any(id => id.AuthenticationType == mar.Scheme))
                 {
                     context.Succeed(requirement);
-                    if (context.Resource is HttpContext httpContext)
-                    {
-                        if (httpContext.Session.TryGetValue($"multiple-authentication-properties-{Scheme}", out var propertiesData))
-                        {
-                            var json = JsonSerializer.Deserialize<AuthenticationPropertiesJson>(propertiesData);
-                            httpContext.Features.Set(new AuthenticationProperties(json.Items));
-                        }
-                    }
                 }
             }
 

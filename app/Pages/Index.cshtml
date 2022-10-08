@@ -10,6 +10,15 @@
     <h1 class="display-4">Welcome</h1>
 </div>
 
+<h1>Tasks</h1>
+
+<ul class="tasks list-unstyled m-0">
+    @foreach (var task in Model.Tasks)
+    {
+        @await Html.PartialAsync("_Task", task)
+    }
+</ul>
+
 <h1>Favourites</h1>
 
 <ul id=favourites-list></ul>

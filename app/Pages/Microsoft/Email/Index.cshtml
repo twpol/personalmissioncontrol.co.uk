@@ -14,34 +14,8 @@
 }
 
 <ul>
-    @foreach (var folder1 in Model.Folders)
+    @foreach (var folder in Model.Folders)
     {
-        <li>
-            <a asp-page="/Microsoft/Email/Folder" asp-route-folder="@folder1.Id">@folder1.Name</a>
-            <ul>
-                @foreach (var folder2 in folder1.Children)
-                {
-                    <li>
-                        <a asp-page="/Microsoft/Email/Folder" asp-route-folder="@folder2.Id">@folder2.Name</a>
-                        <ul>
-                            @foreach (var folder3 in folder2.Children)
-                            {
-                                <li>
-                                    <a asp-page="/Microsoft/Email/Folder" asp-route-folder="@folder3.Id">@folder3.Name</a>
-                                    <ul>
-                                        @foreach (var folder4 in folder3.Children)
-                                        {
-                                            <li>
-                                                <a asp-page="/Microsoft/Email/Folder" asp-route-folder="@folder4.Id">@folder4.Name</a>
-                                            </li>
-                                        }
-                                    </ul>
-                                </li>
-                            }
-                        </ul>
-                    </li>
-                }
-            </ul>
-        </li>
+        @await Html.PartialAsync("_EmailFolder", folder)
     }
 </ul>

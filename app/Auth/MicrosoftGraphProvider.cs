@@ -1,4 +1,3 @@
-using app.Auth;
 using System.Net.Http;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Authentication;
@@ -20,7 +19,7 @@ namespace app.Auth
 
         public MicrosoftGraphProvider(HttpContext context)
         {
-            if (context.TryGetAuthenticationProperties(out var auth))
+            if (context.TryGetMultipleAuthentication("Microsoft", out var auth))
             {
                 var type = auth.GetTokenValue("token_type");
                 var token = auth.GetTokenValue("access_token");

@@ -17,22 +17,7 @@
 <ul class="list-unstyled messages">
     @foreach (var message in Model.Messages)
     {
-        <li class="border mb-4" data-id="@message.Id" data-unread="@message.Unread" data-flagged="@message.Flagged" data-completed="@message.Completed">
-            <div class="d-flex flex-column flex-md-row p-1 bg-dark text-white sticky-top">
-                <div class="flex-110">
-                    <i class="bi bi-envelope-fill text-blue"></i>
-                    <i class="bi bi-envelope-open-fill text-grey"></i>
-                    <i class="bi bi-flag-fill text-red"></i>
-                    <i class="bi bi-flag-fill text-grey"></i>
-                    <i class="bi bi-check-circle-fill text-green"></i>
-                    <i class="bi bi-check-circle-fill text-grey"></i>
-                    <span class="datetime-local" data-ts="@message.Date.ToString("o")"></span>
-                </div>
-                <div class="flex-110">@message.From.Name</div>
-                <div class="flex-110">@message.To.Name</div>
-            </div>
-            <iframe class="seamless border-0 w-100" sandbox="allow-same-origin allow-popups allow-popups-to-escape-sandbox" scrolling="no" srcdoc="@message.HtmlBodyForIFrame" height="0"></iframe>
-        </li>
+        @await Html.PartialAsync("_EmailMessage", message)
     }
 </ul>
 

@@ -1,0 +1,33 @@
+@model app.Data.DisplayTask
+
+<li class="@Model.Classes">
+    <div class="task__item d-flex">
+        @if (Model.IsCompleted)
+        {
+            <i class="px-1 bi bi-check-circle-fill text-green"></i>
+        }
+        else
+        {
+            <i class="px-1 bi bi-circle text-grey"></i>
+        }
+        @if (Model.IsImportant)
+        {
+            <i class="px-1 bi bi-star-fill text-blue"></i>
+        }
+        else
+        {
+            <i class="px-1 bi bi-star text-grey"></i>
+        }
+        <span class="px-1 flex-fill text-truncate">@Model.Title</span>
+        @if (Model.Completed != null)
+        {
+            <span class="px-1 flex-shrink-0 datetime-local" data-ts="@Model.Completed?.ToString("o")"></span>
+        }
+    </div>
+    @if (ViewData["Nested"] as bool? == true && Model.NestedTag != null)
+    {
+        <div hx-get="@Model.NestedUrl" hx-trigger="load" hx-select=".tasks" class="task__children ml-5">
+            <div class="w-50 bg-light rounded-pill">&nbsp;</div>
+        </div>
+    }
+</li>
