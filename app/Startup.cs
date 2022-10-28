@@ -1,5 +1,6 @@
 using System;
 using app.Auth;
+using app.Services;
 using app.Services.Data;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Builder;
@@ -44,6 +45,8 @@ namespace app
                 options.KnownNetworks.Clear();
                 options.KnownProxies.Clear();
             });
+
+            services.AddSingleton<DataMemoryCache>();
 
             services.AddDistributedMemoryCache();
 
