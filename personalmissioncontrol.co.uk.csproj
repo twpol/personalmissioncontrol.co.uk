@@ -6,8 +6,8 @@
     <DefaultItemExcludes>$(DefaultItemExcludes);app\**</DefaultItemExcludes>
   </PropertyGroup>
   <ItemGroup>
-    <PackageReference Include="Pulumi.AzureAD" Version="5.8.0" />
-    <PackageReference Include="Pulumi.AzureNative" Version="1.47.0" />
+    <PackageReference Include="Pulumi.AzureAD" Version="5.28.0" />
+    <PackageReference Include="Pulumi.AzureNative" Version="1.80.0" />
     <PackageReference Include="Microsoft.DotNet.UpgradeAssistant.Extensions.Default.Analyzers" Version="0.4.346202">
       <PrivateAssets>all</PrivateAssets>
     </PackageReference>

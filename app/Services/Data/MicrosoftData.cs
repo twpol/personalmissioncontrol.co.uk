@@ -3,11 +3,10 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
 using System.Linq;
-using System.Text.Json;
 using System.Threading.Tasks;
 using app.Auth;
 using app.Data;
-using Microsoft.Extensions.Caching.Distributed;
+using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Graph;
 
 namespace app.Services.Data
@@ -17,12 +16,12 @@ namespace app.Services.Data
         readonly TimeSpan CacheTimeout = TimeSpan.FromSeconds(30);
 
         GraphServiceClient Graph;
-        IDistributedCache Cache;
+        IMemoryCache Cache;
 
-        public MicrosoftData(MicrosoftGraphProvider provider, IDistributedCache cache)
+        public MicrosoftData(MicrosoftGraphProvider provider, DataMemoryCache cache)
         {
             Graph = provider.Client;
-            Cache = cache;
+            Cache = cache.Cache;
         }
 
         public async Task<IList<TodoTaskList>> GetLists()
@@ -47,32 +46,15 @@ namespace app.Services.Data
         async Task<T> GetOrCreateAsync<T>(string subKey, Func<Task<T>> asyncFactory)
         {
             var key = $"{nameof(MicrosoftData)}:{subKey}";
-            var waitKey = $"{key}:wait";
-            await WaitForCache(waitKey);
-            var json = await Cache.GetStringAsync(key);
-            if (json != null) return JsonSerializer.Deserialize<T>(json);
-            await Cache.SetStringAsync(waitKey, nameof(GetOrCreateAsync));
-            try
+            if (!Cache.TryGetValue<T>(key, out var obj))
             {
-                var obj = await asyncFactory();
-                await Cache.SetStringAsync(key, JsonSerializer.Serialize<T>(obj));
-                return obj;
+                obj = await asyncFactory();
+                Cache.Set(key, obj, new MemoryCacheEntryOptions()
+                {
+                    Size = 1,
+                });
             }
-            finally
-            {
-                await Cache.RemoveAsync(waitKey);
-            }
-        }
-
-        async Task WaitForCache(string waitKey)
-        {
-            var end = DateTimeOffset.Now + CacheTimeout;
-            while (DateTimeOffset.Now < end)
-            {
-                if (await Cache.GetAsync(waitKey) == null) return;
-                await Task.Delay(100);
-            }
-            throw new InvalidOperationException($"Timeout waiting for {waitKey} to be removed");
+            return obj;
         }
 
         async Task<IList<TodoTask>> GetAllPages(ITodoTaskListTasksCollectionRequest request)

@@ -1,5 +1,6 @@
 using System;
 using app.Auth;
+using app.Services;
 using app.Services.Data;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Builder;
@@ -45,7 +46,13 @@ namespace app
                 options.KnownProxies.Clear();
             });
 
-            services.AddDistributedMemoryCache();
+            services.AddSingleton<DataMemoryCache>();
+
+            services.AddDistributedCosmosCache(options =>
+            {
+                options.StorageEndpoint = Configuration["Storage:Cosmos:Endpoint"];
+                options.StorageKey = Configuration["Storage:Cosmos:Key"];
+            });
 
             services.AddSession(options =>
             {

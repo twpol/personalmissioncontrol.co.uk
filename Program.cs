@@ -6,6 +6,7 @@ using Pulumi;
 using Pulumi.AzureAD;
 using Pulumi.AzureAD.Inputs;
 using Pulumi.AzureNative.Cdn;
+using Pulumi.AzureNative.DocumentDB;
 using Pulumi.AzureNative.Insights;
 using Pulumi.AzureNative.Resources;
 using Pulumi.AzureNative.Storage;
@@ -134,6 +135,35 @@ class Program
                 },
             });
 
+            // Create an Azure Cosmos DB Account
+            var cosmosAccount = new DatabaseAccount("pmc", new()
+            {
+                ResourceGroupName = resourceGroup.Name,
+                DatabaseAccountOfferType = DatabaseAccountOfferType.Standard,
+                Kind = DatabaseAccountKind.GlobalDocumentDB,
+                Capabilities = new[]
+                {
+                    new Pulumi.AzureNative.DocumentDB.Inputs.CapabilityArgs
+                    {
+                        Name = "EnableServerless",
+                    },
+                },
+                Locations = new[]
+                {
+                    new Pulumi.AzureNative.DocumentDB.Inputs.LocationArgs
+                    {
+                        LocationName = resourceGroup.Location,
+                    },
+                },
+            });
+
+            // Get Azure Cosmos DB Account Keys
+            var cosmosAccountKeys = ListDatabaseAccountKeys.Invoke(new ListDatabaseAccountKeysInvokeArgs
+            {
+                ResourceGroupName = resourceGroup.Name,
+                AccountName = cosmosAccount.Name,
+            });
+
             // Create an Azure App Service
             var appService = new WebApp("pmc", new WebAppArgs
             {
@@ -150,6 +180,8 @@ class Program
                         new() { Name = "Authentication__Microsoft__ClientId", Value = appReg.ApplicationId },
                         new() { Name = "Authentication__Microsoft__ClientSecret", Value = appRegSecret.Value },
                         new() { Name = "Instrumentation__Honeycomb__ApiKey", Value = config.RequireSecret("honeycomb-apikey") },
+                        new() { Name = "Storage__Cosmos__Endpoint", Value = cosmosAccount.DocumentEndpoint },
+                        new() { Name = "Storage__Cosmos__Key", Value = cosmosAccountKeys.Apply(k => k.PrimaryMasterKey) },
                     },
                 },
                 HttpsOnly = true,
