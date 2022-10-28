@@ -48,7 +48,11 @@ namespace app
 
             services.AddSingleton<DataMemoryCache>();
 
-            services.AddDistributedMemoryCache();
+            services.AddDistributedCosmosCache(options =>
+            {
+                options.StorageEndpoint = Configuration["Storage:Cosmos:Endpoint"];
+                options.StorageKey = Configuration["Storage:Cosmos:Key"];
+            });
 
             services.AddSession(options =>
             {
