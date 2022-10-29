@@ -2,6 +2,7 @@ using System;
 using app.Auth;
 using app.Services;
 using app.Services.Data;
+using Microsoft.AspNetCore.Authentication.MicrosoftAccount;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
@@ -83,6 +84,7 @@ namespace app
             });
 
             services.AddSingleton<IAuthorizationMiddlewareResultHandler, MultipleAuthenticationAuthorizationMiddlewareResultHandler>();
+            services.AddSingleton<MultipleAuthenticationContext<MicrosoftAccountOptions>>();
 
             services.AddScoped<MicrosoftGraphProvider>();
             services.AddScoped<MicrosoftData>();
