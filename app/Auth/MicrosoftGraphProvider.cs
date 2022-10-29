@@ -1,7 +1,7 @@
 using System.Net.Http;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Authentication;
-using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Authentication.MicrosoftAccount;
 using Microsoft.Graph;
 
 namespace app.Auth
@@ -12,14 +12,9 @@ namespace app.Auth
 
         string Authorization { get; init; }
 
-        public MicrosoftGraphProvider(IHttpContextAccessor contextAccessor)
-        : this(contextAccessor.HttpContext)
+        public MicrosoftGraphProvider(MultipleAuthenticationContext<MicrosoftAccountOptions> authenticationContext)
         {
-        }
-
-        public MicrosoftGraphProvider(HttpContext context)
-        {
-            if (context.TryGetMultipleAuthentication("Microsoft", out var auth))
+            if (authenticationContext.TryGetAuthentication("Microsoft", out var auth))
             {
                 var type = auth.GetTokenValue("token_type");
                 var token = auth.GetTokenValue("access_token");

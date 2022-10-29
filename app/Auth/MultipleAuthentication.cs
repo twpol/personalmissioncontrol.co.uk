@@ -1,12 +1,15 @@
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.IO;
 using System.Linq;
+using System.Net.Http;
 using System.Security.Claims;
 using System.Text.Encodings.Web;
 using System.Text.Json;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Authentication;
+using Microsoft.AspNetCore.Authentication.OAuth;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Authorization.Policy;
 using Microsoft.AspNetCore.Http;
@@ -27,18 +30,6 @@ namespace app.Auth
         public static AuthenticationBuilder AddMultiple(this AuthenticationBuilder builder, Action<MultipleAuthenticationOptions> configureOptions) => builder.AddMultiple(MultipleAuthenticationDefaults.AuthenticationScheme, configureOptions);
         public static AuthenticationBuilder AddMultiple(this AuthenticationBuilder builder, string authenticationScheme, Action<MultipleAuthenticationOptions> configureOptions) => builder.AddMultiple(authenticationScheme, MultipleAuthenticationDefaults.DisplayName, configureOptions);
         public static AuthenticationBuilder AddMultiple(this AuthenticationBuilder builder, string authenticationScheme, string displayName, Action<MultipleAuthenticationOptions> configureOptions) => builder.AddScheme<MultipleAuthenticationOptions, MultipleAuthenticationHandler>(authenticationScheme, displayName, configureOptions);
-
-        public static bool TryGetMultipleAuthentication(this HttpContext context, string scheme, out AuthenticationProperties value)
-        {
-            if (context.Session.TryGetValue($"multiple-authentication-properties-{scheme}", out var propertiesData))
-            {
-                var json = JsonSerializer.Deserialize<AuthenticationPropertiesJson>(propertiesData);
-                value = new AuthenticationProperties(json.Items);
-                return true;
-            }
-            value = null;
-            return false;
-        }
     }
 
     public class MultipleAuthenticationOptions : AuthenticationSchemeOptions
@@ -58,7 +49,12 @@ namespace app.Auth
 
         protected override Task HandleSignInAsync(ClaimsPrincipal user, AuthenticationProperties properties)
         {
+            if (Logger.IsEnabled(LogLevel.Debug)) Logger.LogDebug($"HandleSignInAsync({user.Identity.AuthenticationType}/{user.Identity.Name})");
+
             var principal = GetCurrentPrincipal();
+            var nameId = user.Claims.FirstOrDefault(claim => claim.Type == ClaimTypes.NameIdentifier)?.Value ?? "";
+            var existing = principal.Identities.Where(identity => identity.AuthenticationType == user.Identity.AuthenticationType && identity.HasClaim(ClaimTypes.NameIdentifier, nameId));
+            if (existing.Any()) principal = new ClaimsPrincipal(principal.Identities.Except(existing));
             principal.AddIdentities(user.Identities);
             SetCurrentPrincipal(principal);
 
@@ -127,6 +123,59 @@ namespace app.Auth
             }
 
             return Task.CompletedTask;
+        }
+    }
+
+    public class MultipleAuthenticationContext<T> where T : OAuthOptions
+    {
+        readonly IHttpContextAccessor ContextAccessor;
+        readonly IOptionsMonitor<T> OptionsMonitor;
+
+        public MultipleAuthenticationContext(IHttpContextAccessor contextAccessor, IOptionsMonitor<T> optionsMonitor)
+        {
+            ContextAccessor = contextAccessor;
+            OptionsMonitor = optionsMonitor;
+        }
+
+        public bool TryGetAuthentication(string scheme, out AuthenticationProperties value)
+        {
+            if (ContextAccessor.HttpContext.Session.TryGetValue($"multiple-authentication-properties-{scheme}", out var propertiesData))
+            {
+                var json = JsonSerializer.Deserialize<AuthenticationPropertiesJson>(propertiesData);
+                value = new AuthenticationProperties(json.Items);
+
+                if ((DateTimeOffset.Parse(value.GetTokenValue("expires_at")) - DateTimeOffset.Now).TotalMinutes < 5)
+                {
+                    var options = OptionsMonitor.Get(scheme);
+                    var content = new FormUrlEncodedContent(new Dictionary<string, string>
+                    {
+                        { "client_id", options.ClientId },
+                        { "client_secret", options.ClientSecret },
+                        { "grant_type", "refresh_token" },
+                        { "refresh_token", value.GetTokenValue("refresh_token") },
+                    });
+                    var response = options.Backchannel.PostAsync(options.TokenEndpoint, content, ContextAccessor.HttpContext.RequestAborted).Result;
+                    response.EnsureSuccessStatusCode();
+
+                    using (var payload = JsonDocument.Parse(response.Content.ReadAsStringAsync().Result))
+                    {
+                        value.UpdateTokenValue("access_token", payload.RootElement.GetString("access_token"));
+                        value.UpdateTokenValue("refresh_token", payload.RootElement.GetString("refresh_token"));
+                        if (payload.RootElement.TryGetProperty("expires_in", out var property) && property.TryGetInt32(out var seconds))
+                        {
+                            var expiresAt = DateTimeOffset.UtcNow + TimeSpan.FromSeconds(seconds);
+                            value.UpdateTokenValue("expires_at", expiresAt.ToString("o", CultureInfo.InvariantCulture));
+                        }
+                        var user = ContextAccessor.HttpContext.AuthenticateAsync().Result.Principal;
+                        ContextAccessor.HttpContext.SignInAsync(user, value).Wait();
+                    }
+                }
+
+                return true;
+            }
+
+            value = null;
+            return false;
         }
     }
 
