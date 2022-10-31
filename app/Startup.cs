@@ -124,6 +124,7 @@ namespace app
             app.UseRouting();
 
             app.UseSession();
+            app.UseSessionSlidingExpiration();
             app.UseAuthentication();
             app.UseAuthorization();
 
