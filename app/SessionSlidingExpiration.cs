@@ -10,14 +10,14 @@ namespace app
     public class SessionSlidingExpirationMiddleware
     {
         readonly RequestDelegate Next;
-        readonly ILogger Logger;
+        readonly ILogger<SessionSlidingExpirationMiddleware> Logger;
         readonly TimeSpan IdleTimeout;
         readonly CookieBuilder CookieBuilder;
 
-        public SessionSlidingExpirationMiddleware(RequestDelegate next, ILoggerFactory logger, IOptions<SessionOptions> options)
+        public SessionSlidingExpirationMiddleware(RequestDelegate next, ILogger<SessionSlidingExpirationMiddleware> logger, IOptions<SessionOptions> options)
         {
             Next = next;
-            Logger = logger.CreateLogger<SessionSlidingExpirationMiddleware>();
+            Logger = logger;
             IdleTimeout = options.Value.IdleTimeout;
             CookieBuilder = options.Value.Cookie;
         }
