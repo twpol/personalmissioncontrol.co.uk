@@ -1,6 +1,7 @@
 using System;
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.AspNetCore.Builder;
 using Microsoft.Azure.Cosmos;
 using Microsoft.Extensions.Caching.Distributed;
 using Microsoft.Extensions.DependencyInjection;
@@ -30,7 +31,7 @@ namespace app.Services
         readonly Database Database;
         readonly Container Container;
 
-        public CosmosDistributedCache(IOptions<CosmosDistributedCacheOptions> optionsAccessor, ILoggerFactory loggerFactory)
+        public CosmosDistributedCache(IOptions<CosmosDistributedCacheOptions> optionsAccessor, ILoggerFactory loggerFactory, IOptions<SessionOptions> sessionOptions)
         {
             Logger = loggerFactory.CreateLogger<CosmosDistributedCache>();
             var options = optionsAccessor.Value;
@@ -39,7 +40,7 @@ namespace app.Services
             Container = Database.CreateContainerIfNotExistsAsync(options.StorageContainer, "/id").Result;
             var _ = Container.ReplaceContainerAsync(new ContainerProperties(Container.Id, "/id")
             {
-                DefaultTimeToLive = 43200,
+                DefaultTimeToLive = (int)sessionOptions.Value.IdleTimeout.TotalSeconds,
             }).Result;
         }
 
