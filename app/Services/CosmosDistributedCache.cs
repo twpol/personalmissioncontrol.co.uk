@@ -26,18 +26,17 @@ namespace app.Services
 
     public class CosmosDistributedCache : IDistributedCache
     {
-        readonly ILogger Logger;
+        readonly ILogger<CosmosDistributedCache> Logger;
         readonly CosmosClient Client;
         readonly Database Database;
         readonly Container Container;
 
-        public CosmosDistributedCache(IOptions<CosmosDistributedCacheOptions> optionsAccessor, ILoggerFactory loggerFactory, IOptions<SessionOptions> sessionOptions)
+        public CosmosDistributedCache(IOptions<CosmosDistributedCacheOptions> options, ILogger<CosmosDistributedCache> logger, IOptions<SessionOptions> sessionOptions)
         {
-            Logger = loggerFactory.CreateLogger<CosmosDistributedCache>();
-            var options = optionsAccessor.Value;
-            Client = new CosmosClient(options.StorageEndpoint, options.StorageKey);
-            Database = Client.CreateDatabaseIfNotExistsAsync(options.StorageDatabase).Result;
-            Container = Database.CreateContainerIfNotExistsAsync(options.StorageContainer, "/id").Result;
+            Logger = logger;
+            Client = new CosmosClient(options.Value.StorageEndpoint, options.Value.StorageKey);
+            Database = Client.CreateDatabaseIfNotExistsAsync(options.Value.StorageDatabase).Result;
+            Container = Database.CreateContainerIfNotExistsAsync(options.Value.StorageContainer, "/id").Result;
             var _ = Container.ReplaceContainerAsync(new ContainerProperties(Container.Id, "/id")
             {
                 DefaultTimeToLive = (int)sessionOptions.Value.IdleTimeout.TotalSeconds,
