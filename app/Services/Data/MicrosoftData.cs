@@ -38,7 +38,7 @@ namespace app.Services.Data
             return await GetOrCreateAsync($"tasks:list:{list}", async () =>
             {
                 return (await GetAllPages(Graph.Me.Todo.Lists[list].Tasks.Request().Top(1000)))
-                    .Select(task => new TaskModel(task.Id, task.Title, task.Status ?? Microsoft.Graph.TaskStatus.NotStarted, task.Importance ?? Importance.Normal, GetDTO(task.CompletedDateTime)))
+                    .Select(task => FromGraph(task))
                     .OrderBy(task => task.SortKey).ToList();
             });
         }
@@ -79,6 +79,11 @@ namespace app.Services.Data
                 default:
                     throw new InvalidDataException($"Unknown time zone: {dateTimeTimeZone.TimeZone}");
             }
+        }
+
+        TaskModel FromGraph(TodoTask task)
+        {
+            return new TaskModel(task.Id, task.Title, task.Importance == Importance.High, task.Status == Microsoft.Graph.TaskStatus.Completed ? GetDTO(task.CompletedDateTime) : null);
         }
     }
 }

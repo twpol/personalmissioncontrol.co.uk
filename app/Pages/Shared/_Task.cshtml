@@ -19,7 +19,7 @@
             <i class="px-1 bi bi-star text-grey"></i>
         }
         <span class="px-1 flex-fill text-truncate">@Model.Title</span>
-        @if (Model.Completed != null)
+        @if (Model.IsCompleted)
         {
             <span class="px-1 flex-shrink-0 datetime-local" data-ts="@Model.Completed?.ToString("o")"></span>
         }
