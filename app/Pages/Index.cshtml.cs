@@ -4,7 +4,7 @@ using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.Extensions.Logging;
-using app.Data;
+using app.Models;
 using app.Services.Data;
 
 namespace app.Pages
@@ -12,7 +12,7 @@ namespace app.Pages
     [ResponseCache(Duration = 1, Location = ResponseCacheLocation.Client)]
     public class IndexModel : PageModel
     {
-        public IEnumerable<DisplayTask> Tasks;
+        public IEnumerable<TaskModel> Tasks;
 
         private readonly ILogger<IndexModel> _logger;
         private readonly MicrosoftData _data;
@@ -25,7 +25,7 @@ namespace app.Pages
 
         public async Task OnGet()
         {
-            var tasks = new List<DisplayTask>();
+            var tasks = new List<TaskModel>();
             foreach (var list in await _data.GetLists())
             {
                 tasks.AddRange((await _data.GetTasks(list.Id)).Where(task => task.IsImportant && !task.IsCompleted));

@@ -5,7 +5,7 @@ using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using app.Auth;
-using app.Data;
+using app.Models;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Graph;
 
@@ -32,13 +32,13 @@ namespace app.Services.Data
             );
         }
 
-        public async Task<IList<DisplayTask>> GetTasks(string list)
+        public async Task<IList<TaskModel>> GetTasks(string list)
         {
-            if (Graph == null) return new DisplayTask[0];
+            if (Graph == null) return new TaskModel[0];
             return await GetOrCreateAsync($"tasks:list:{list}", async () =>
             {
                 return (await GetAllPages(Graph.Me.Todo.Lists[list].Tasks.Request().Top(1000)))
-                    .Select(task => new DisplayTask(task.Id, task.Title, task.Status ?? Microsoft.Graph.TaskStatus.NotStarted, task.Importance ?? Importance.Normal, GetDTO(task.CompletedDateTime)))
+                    .Select(task => new TaskModel(task.Id, task.Title, task.Status ?? Microsoft.Graph.TaskStatus.NotStarted, task.Importance ?? Importance.Normal, GetDTO(task.CompletedDateTime)))
                     .OrderBy(task => task.SortKey).ToList();
             });
         }

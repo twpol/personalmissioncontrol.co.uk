@@ -2,9 +2,9 @@ using System;
 using System.Collections.Generic;
 using Microsoft.Graph;
 
-namespace app.Data
+namespace app.Models
 {
-    public record DisplayTask(string Id, string Title, TaskStatus Status, Importance Importance, DateTimeOffset? Completed)
+    public record TaskModel(string Id, string Title, TaskStatus Status, Importance Importance, DateTimeOffset? Completed)
     {
         static Dictionary<TaskStatus, string> StatusSort = new()
             {

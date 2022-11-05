@@ -3,7 +3,7 @@ using System.Linq;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using app.Auth;
-using app.Data;
+using app.Models;
 using app.Services.Data;
 using Microsoft.Graph;
 
@@ -13,7 +13,7 @@ namespace app.Pages.Microsoft.Tasks
     {
         public string Title;
         public TodoTaskList List;
-        public IEnumerable<DisplayTask> Tasks;
+        public IEnumerable<TaskModel> Tasks;
         public bool Nested;
 
         GraphServiceClient Graph;
@@ -43,7 +43,7 @@ namespace app.Pages.Microsoft.Tasks
             Title = text;
             Nested = HttpContext.Request.Query["layout"] == "nested";
 
-            var tasks = new List<DisplayTask>();
+            var tasks = new List<TaskModel>();
             foreach (var list in await Data.GetLists())
             {
                 tasks.AddRange((await Data.GetTasks(list.Id)).Where(task => task.Title.Contains(text)));
@@ -56,7 +56,7 @@ namespace app.Pages.Microsoft.Tasks
             Title = $"#{hashtag}";
             Nested = HttpContext.Request.Query["layout"] == "nested";
 
-            var tasks = new List<DisplayTask>();
+            var tasks = new List<TaskModel>();
             foreach (var list in await Data.GetLists())
             {
                 tasks.AddRange((await Data.GetTasks(list.Id)).Where(task => task.Title.Contains(Title)));
