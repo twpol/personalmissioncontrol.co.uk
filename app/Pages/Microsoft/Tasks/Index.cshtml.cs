@@ -5,13 +5,14 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using app.Auth;
+using app.Models;
 using Microsoft.Graph;
 
 namespace app.Pages.Microsoft.Tasks
 {
     public class IndexModel : MicrosoftPageModel
     {
-        public IEnumerable<DisplayTaskList> Lists;
+        public IEnumerable<TaskListModel> Lists;
 
         GraphServiceClient Graph;
 
@@ -25,13 +26,13 @@ namespace app.Pages.Microsoft.Tasks
             Lists = GetTaskLists(await Graph.Me.Todo.Lists.Request().Top(1000).GetAsync()).OrderBy(list => list.SortKey);
         }
 
-        IEnumerable<DisplayTaskList> GetTaskLists(IEnumerable<TodoTaskList> lists)
+        IEnumerable<TaskListModel> GetTaskLists(IEnumerable<TodoTaskList> lists)
         {
-            var displayLists = new List<DisplayTaskList>();
+            var displayLists = new List<TaskListModel>();
             foreach (var list in lists)
             {
                 var split = GetSplitEmojiName(list.DisplayName);
-                displayLists.Add(new DisplayTaskList(list.Id, split.Emoji, split.Text, list.WellknownListName, list.IsOwner ?? false, list.IsShared ?? true));
+                displayLists.Add(new TaskListModel(list.Id, split.Emoji, split.Text, list.WellknownListName == WellknownListName.DefaultList ? TaskListSpecial.Default : list.WellknownListName == WellknownListName.FlaggedEmails ? TaskListSpecial.Emails : TaskListSpecial.None));
             }
             return displayLists;
         }
@@ -48,19 +49,6 @@ namespace app.Pages.Microsoft.Tasks
             var runes = text.EnumerateRunes();
             var unicode = runes.Select(rune => Rune.GetUnicodeCategory(rune));
             return runes.Any(rune => rune.Value == 0xFE0F) || unicode.Any(category => category == UnicodeCategory.OtherSymbol);
-        }
-
-        public record DisplayTaskList(string Id, string NameEmoji, string NameText, WellknownListName? KnownList, bool IsOwner, bool Isshared)
-        {
-            public string SortKey
-            {
-                get
-                {
-                    if (this.KnownList == WellknownListName.DefaultList) return "01 ";
-                    if (this.KnownList == WellknownListName.FlaggedEmails) return "02 ";
-                    return "99 " + this.NameText;
-                }
-            }
         }
     }
 }
