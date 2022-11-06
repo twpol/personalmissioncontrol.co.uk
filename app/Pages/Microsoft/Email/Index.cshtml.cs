@@ -7,7 +7,7 @@ namespace app.Pages.Microsoft.Email
 {
     public class IndexModel : MicrosoftPageModel
     {
-        public IEnumerable<DisplayFolder> Folders;
+        public IEnumerable<DisplayFolder> Folders = null!;
 
         GraphServiceClient Graph;
 

@@ -15,7 +15,7 @@ namespace app.Services.Data
     {
         readonly TimeSpan CacheTimeout = TimeSpan.FromSeconds(30);
 
-        GraphServiceClient Graph;
+        GraphServiceClient? Graph;
         IModelCache<IList<TodoTaskList>> TaskListCache;
         IModelCache<IList<TaskModel>> TaskCache;
 

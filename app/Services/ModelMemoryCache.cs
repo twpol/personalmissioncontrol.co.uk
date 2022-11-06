@@ -21,11 +21,11 @@ namespace app.Services
             Logger = logger;
         }
 
-        public Task<T> GetAsync(string key)
+        public Task<T?> GetAsync(string key)
         {
             if (Logger.IsEnabled(LogLevel.Debug)) Logger.LogDebug($"Get({key})");
-            if (Cache.TryGetValue<T>(key, out var value)) return Task.FromResult(value);
-            return Task.FromResult<T>(null);
+            if (Cache.TryGetValue<T?>(key, out var value)) return Task.FromResult(value);
+            return Task.FromResult<T?>(null);
         }
 
         public Task RemoveAsync(string key)

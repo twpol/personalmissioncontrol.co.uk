@@ -1,3 +1,4 @@
+using System;
 using System.Net.Http;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Authentication;
@@ -8,9 +9,17 @@ namespace app.Auth
 {
     public class MicrosoftGraphProvider : IAuthenticationProvider
     {
-        public GraphServiceClient Client { get; init; }
+        public GraphServiceClient Client
+        {
+            get
+            {
+                if (RealClient == null) throw new InvalidOperationException("Microsoft Graph client not initialised");
+                return RealClient;
+            }
+        }
 
-        string Authorization { get; init; }
+        readonly GraphServiceClient? RealClient;
+        readonly string? Authorization;
 
         public MicrosoftGraphProvider(MultipleAuthenticationContext<MicrosoftAccountOptions> authenticationContext)
         {
@@ -19,13 +28,13 @@ namespace app.Auth
                 var type = auth.GetTokenValue("token_type");
                 var token = auth.GetTokenValue("access_token");
                 Authorization = $"{type} {token}";
-                Client = new GraphServiceClient(this);
+                RealClient = new GraphServiceClient(this);
             }
         }
 
         public Task AuthenticateRequestAsync(HttpRequestMessage request)
         {
-            if (Authorization.Length > 0 && !request.Headers.Contains("Authorization"))
+            if (Authorization != null && !request.Headers.Contains("Authorization"))
             {
                 request.Headers.Add("Authorization", Authorization);
             }

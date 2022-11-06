@@ -11,9 +11,9 @@ namespace app.Pages.Microsoft.Tasks
 {
     public class ListModel : MicrosoftPageModel
     {
-        public string Title;
-        public TodoTaskList List;
-        public IEnumerable<TaskModel> Tasks;
+        public string Title = null!;
+        public TodoTaskList List = null!;
+        public IEnumerable<TaskModel> Tasks = null!;
         public bool Nested;
 
         GraphServiceClient Graph;
