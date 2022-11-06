@@ -8,9 +8,9 @@ namespace app.Auth
 {
     public class MicrosoftGraphProvider : IAuthenticationProvider
     {
-        public GraphServiceClient Client { get; init; }
+        public GraphServiceClient? Client { get; init; }
 
-        string Authorization { get; init; }
+        string? Authorization { get; init; }
 
         public MicrosoftGraphProvider(MultipleAuthenticationContext<MicrosoftAccountOptions> authenticationContext)
         {
@@ -25,7 +25,7 @@ namespace app.Auth
 
         public Task AuthenticateRequestAsync(HttpRequestMessage request)
         {
-            if (Authorization.Length > 0 && !request.Headers.Contains("Authorization"))
+            if (Authorization != null && !request.Headers.Contains("Authorization"))
             {
                 request.Headers.Add("Authorization", Authorization);
             }

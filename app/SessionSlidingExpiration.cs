@@ -47,7 +47,12 @@ namespace app
         {
             var expiry = DateTimeOffset.UtcNow.Add(IdleTimeout / 2);
             var cookieOptions = CookieBuilder.Build(context);
-            context.Response.Cookies.Append(CookieBuilder.Name, context.Request.Cookies[CookieBuilder.Name], cookieOptions);
+            if (CookieBuilder.Name == null) return;
+
+            var value = context.Request.Cookies[CookieBuilder.Name];
+            if (value == null) return;
+
+            context.Response.Cookies.Append(CookieBuilder.Name, value, cookieOptions);
             context.Session.SetString("SessionSlidingExpiry", expiry.ToString("o"));
             if (Logger.IsEnabled(LogLevel.Debug)) Logger.LogDebug($"Extended expiry to {expiry}");
         }

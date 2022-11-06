@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
 using System.IO;
 using System.Linq;
@@ -47,8 +48,9 @@ namespace app.Auth
             return Task.FromResult(AuthenticateResult.Success(new AuthenticationTicket(GetCurrentPrincipal(), Scheme.Name)));
         }
 
-        protected override Task HandleSignInAsync(ClaimsPrincipal user, AuthenticationProperties properties)
+        protected override Task HandleSignInAsync(ClaimsPrincipal user, AuthenticationProperties? properties)
         {
+            if (user.Identity == null) return Task.CompletedTask;
             if (Logger.IsEnabled(LogLevel.Debug)) Logger.LogDebug($"HandleSignInAsync({user.Identity.AuthenticationType}/{user.Identity.Name})");
 
             var principal = GetCurrentPrincipal();
@@ -67,9 +69,13 @@ namespace app.Auth
         {
             if (Context.Session.TryGetValue($"multiple-authentication-principal-{Scheme.Name}", out var ticketData))
             {
-                using var stream = new MemoryStream(JsonSerializer.Deserialize<byte[]>(ticketData));
-                using var reader = new BinaryReader(stream);
-                return new ClaimsPrincipal(reader);
+                var bytes = JsonSerializer.Deserialize<byte[]>(ticketData);
+                if (bytes != null)
+                {
+                    using var stream = new MemoryStream(bytes);
+                    using var reader = new BinaryReader(stream);
+                    return new ClaimsPrincipal(reader);
+                }
             }
             return new ClaimsPrincipal();
         }
@@ -82,7 +88,7 @@ namespace app.Auth
             Context.Session.Set($"multiple-authentication-principal-{Scheme.Name}", JsonSerializer.SerializeToUtf8Bytes(stream.ToArray()));
         }
 
-        protected override Task HandleSignOutAsync(AuthenticationProperties properties)
+        protected override Task HandleSignOutAsync(AuthenticationProperties? properties)
         {
             throw new NotImplementedException();
         }
@@ -94,7 +100,7 @@ namespace app.Auth
 
         public async Task HandleAsync(RequestDelegate request, HttpContext context, AuthorizationPolicy policy, PolicyAuthorizationResult result)
         {
-            if (result.Forbidden && result.AuthorizationFailure.FailedRequirements.OfType<MultipleAuthenticationRequirement>().Any())
+            if (result.Forbidden && (result.AuthorizationFailure?.FailedRequirements.OfType<MultipleAuthenticationRequirement>().Any() ?? false))
             {
                 result = PolicyAuthorizationResult.Challenge();
             }
@@ -137,14 +143,18 @@ namespace app.Auth
             OptionsMonitor = optionsMonitor;
         }
 
-        public bool TryGetAuthentication(string scheme, out AuthenticationProperties value)
+        public bool TryGetAuthentication(string scheme, [NotNullWhen(true)] out AuthenticationProperties? value)
         {
-            if (ContextAccessor.HttpContext.Session.TryGetValue($"multiple-authentication-properties-{scheme}", out var propertiesData))
+            value = null;
+            if (ContextAccessor.HttpContext?.Session.TryGetValue($"multiple-authentication-properties-{scheme}", out var propertiesData) ?? false)
             {
                 var json = JsonSerializer.Deserialize<AuthenticationPropertiesJson>(propertiesData);
-                value = new AuthenticationProperties(json.Items);
+                if (json == null) return false;
 
-                if ((DateTimeOffset.Parse(value.GetTokenValue("expires_at")) - DateTimeOffset.Now).TotalMinutes < 5)
+                value = new AuthenticationProperties(json.Items);
+                var expiresAt = value.GetTokenValue("expires_at");
+                var refreshToken = value.GetTokenValue("refresh_token");
+                if (expiresAt != null && refreshToken != null && (DateTimeOffset.Parse(expiresAt) - DateTimeOffset.Now).TotalMinutes < 5)
                 {
                     var options = OptionsMonitor.Get(scheme);
                     var content = new FormUrlEncodedContent(new Dictionary<string, string>
@@ -152,32 +162,36 @@ namespace app.Auth
                         { "client_id", options.ClientId },
                         { "client_secret", options.ClientSecret },
                         { "grant_type", "refresh_token" },
-                        { "refresh_token", value.GetTokenValue("refresh_token") },
+                        { "refresh_token", refreshToken },
                     });
                     var response = options.Backchannel.PostAsync(options.TokenEndpoint, content, ContextAccessor.HttpContext.RequestAborted).Result;
                     response.EnsureSuccessStatusCode();
 
                     using (var payload = JsonDocument.Parse(response.Content.ReadAsStringAsync().Result))
                     {
-                        value.UpdateTokenValue("access_token", payload.RootElement.GetString("access_token"));
-                        value.UpdateTokenValue("refresh_token", payload.RootElement.GetString("refresh_token"));
-                        if (payload.RootElement.TryGetProperty("expires_in", out var property) && property.TryGetInt32(out var seconds))
+                        var newAccessToken = payload.RootElement.GetString("access_token");
+                        var newRefreshToken = payload.RootElement.GetString("refresh_token");
+                        if (newAccessToken != null && newRefreshToken != null)
                         {
-                            var expiresAt = DateTimeOffset.UtcNow + TimeSpan.FromSeconds(seconds);
-                            value.UpdateTokenValue("expires_at", expiresAt.ToString("o", CultureInfo.InvariantCulture));
+                            value.UpdateTokenValue("access_token", newAccessToken);
+                            value.UpdateTokenValue("refresh_token", newRefreshToken);
+                            if (payload.RootElement.TryGetProperty("expires_in", out var property) && property.TryGetInt32(out var seconds))
+                            {
+                                var newExpiresAt = DateTimeOffset.UtcNow + TimeSpan.FromSeconds(seconds);
+                                value.UpdateTokenValue("expires_at", newExpiresAt.ToString("o", CultureInfo.InvariantCulture));
+                            }
+                            var user = ContextAccessor.HttpContext.AuthenticateAsync().Result.Principal;
+                            if (user != null) ContextAccessor.HttpContext.SignInAsync(user, value).Wait();
                         }
-                        var user = ContextAccessor.HttpContext.AuthenticateAsync().Result.Principal;
-                        ContextAccessor.HttpContext.SignInAsync(user, value).Wait();
                     }
                 }
 
                 return true;
             }
 
-            value = null;
             return false;
         }
     }
 
-    record AuthenticationPropertiesJson(IDictionary<string, string> Items);
+    record AuthenticationPropertiesJson(IDictionary<string, string?> Items);
 }

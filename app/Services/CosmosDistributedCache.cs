@@ -18,8 +18,8 @@ namespace app.Services
 
     public class CosmosDistributedCacheOptions
     {
-        public string StorageEndpoint { get; set; }
-        public string StorageKey { get; set; }
+        public string? StorageEndpoint { get; set; }
+        public string? StorageKey { get; set; }
         public string StorageDatabase { get; set; } = "cache";
         public string StorageContainer { get; set; } = "cache";
     }
@@ -43,9 +43,9 @@ namespace app.Services
             }).Result;
         }
 
-        public byte[] Get(string key) => GetAsync(key).Result;
+        public byte[]? Get(string key) => GetAsync(key).Result;
 
-        public async Task<byte[]> GetAsync(string key, CancellationToken token = default)
+        public async Task<byte[]?> GetAsync(string key, CancellationToken token = default)
         {
             try
             {
