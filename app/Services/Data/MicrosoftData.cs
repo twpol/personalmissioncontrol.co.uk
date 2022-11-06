@@ -16,18 +16,20 @@ namespace app.Services.Data
         readonly TimeSpan CacheTimeout = TimeSpan.FromSeconds(30);
 
         GraphServiceClient Graph;
-        IMemoryCache Cache;
+        IModelCache<IList<TodoTaskList>> TaskListCache;
+        IModelCache<IList<TaskModel>> TaskCache;
 
-        public MicrosoftData(MicrosoftGraphProvider provider, DataMemoryCache cache)
+        public MicrosoftData(MicrosoftGraphProvider provider, IModelCache<IList<TodoTaskList>> taskListCache, IModelCache<IList<TaskModel>> taskCache)
         {
             Graph = provider.Client;
-            Cache = cache.Cache;
+            TaskListCache = taskListCache;
+            TaskCache = taskCache;
         }
 
         public async Task<IList<TodoTaskList>> GetLists()
         {
             if (Graph == null) return new TodoTaskList[0];
-            return await GetOrCreateAsync("tasks:lists", async () =>
+            return await GetOrCreateAsync<IList<TodoTaskList>>(TaskListCache, "tasks:lists", async () =>
                 await Graph.Me.Todo.Lists.Request().Top(1000).GetAsync()
             );
         }
@@ -35,7 +37,7 @@ namespace app.Services.Data
         public async Task<IList<TaskModel>> GetTasks(string list)
         {
             if (Graph == null) return new TaskModel[0];
-            return await GetOrCreateAsync($"tasks:list:{list}", async () =>
+            return await GetOrCreateAsync<IList<TaskModel>>(TaskCache, $"tasks:list:{list}", async () =>
             {
                 return (await GetAllPages(Graph.Me.Todo.Lists[list].Tasks.Request().Top(1000)))
                     .Select(task => FromGraph(task))
@@ -43,17 +45,16 @@ namespace app.Services.Data
             });
         }
 
-        async Task<T> GetOrCreateAsync<T>(string subKey, Func<Task<T>> asyncFactory)
+        async Task<T> GetOrCreateAsync<T>(IModelCache<T> cache, string subKey, Func<Task<T>> asyncFactory) where T : class
         {
             var key = $"{nameof(MicrosoftData)}:{subKey}";
-            if (!Cache.TryGetValue<T>(key, out var obj))
-            {
-                obj = await asyncFactory();
-                Cache.Set(key, obj, new MemoryCacheEntryOptions()
-                {
-                    Size = 1,
-                });
-            }
+            return (await cache.GetAsync(key)) ?? (await SetAsync(cache, key, asyncFactory));
+        }
+
+        async Task<T> SetAsync<T>(IModelCache<T> cache, string key, Func<Task<T>> asyncFactory) where T : class
+        {
+            var obj = await asyncFactory();
+            await cache.SetAsync(key, obj);
             return obj;
         }
 
