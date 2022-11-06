@@ -6,7 +6,6 @@ using System.Linq;
 using System.Threading.Tasks;
 using app.Auth;
 using app.Models;
-using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Graph;
 
 namespace app.Services.Data

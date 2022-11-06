@@ -26,7 +26,7 @@ namespace app.Pages.Microsoft.Tasks
             Lists = GetTaskLists(await Graph.Me.Todo.Lists.Request().Top(1000).GetAsync()).OrderBy(list => list.SortKey);
         }
 
-        IEnumerable<TaskListModel> GetTaskLists(IEnumerable<TodoTaskList> lists)
+        static IEnumerable<TaskListModel> GetTaskLists(IEnumerable<TodoTaskList> lists)
         {
             var displayLists = new List<TaskListModel>();
             foreach (var list in lists)
