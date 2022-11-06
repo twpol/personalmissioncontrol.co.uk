@@ -12,7 +12,7 @@ namespace app.Pages.Microsoft.Tasks
 {
     public class IndexModel : MicrosoftPageModel
     {
-        public IEnumerable<TaskListModel> Lists;
+        public IEnumerable<TaskListModel> Lists = null!;
 
         GraphServiceClient Graph;
 

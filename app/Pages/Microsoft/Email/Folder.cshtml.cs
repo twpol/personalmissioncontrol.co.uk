@@ -9,8 +9,8 @@ namespace app.Pages.Microsoft.Email
 {
     public class FolderModel : MicrosoftPageModel
     {
-        public MailFolder Folder;
-        public IEnumerable<DisplayConversation> Conversations;
+        public MailFolder Folder = null!;
+        public IEnumerable<DisplayConversation> Conversations = null!;
 
         GraphServiceClient Graph;
 

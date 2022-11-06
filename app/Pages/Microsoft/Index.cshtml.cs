@@ -6,8 +6,8 @@ namespace app.Pages.Microsoft
 {
     public class IndexModel : MicrosoftPageModel
     {
-        public string UserName { get; set; }
-        public string UserEmail { get; set; }
+        public string UserName { get; set; } = null!;
+        public string UserEmail { get; set; } = null!;
 
         GraphServiceClient Graph;
 

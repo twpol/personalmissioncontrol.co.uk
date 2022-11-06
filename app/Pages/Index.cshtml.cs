@@ -12,7 +12,7 @@ namespace app.Pages
     [ResponseCache(Duration = 1, Location = ResponseCacheLocation.Client)]
     public class IndexModel : PageModel
     {
-        public IEnumerable<TaskModel> Tasks;
+        public IEnumerable<TaskModel> Tasks = null!;
 
         private readonly ILogger<IndexModel> _logger;
         private readonly MicrosoftData _data;

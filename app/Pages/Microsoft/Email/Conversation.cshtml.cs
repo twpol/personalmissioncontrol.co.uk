@@ -25,8 +25,8 @@ namespace app.Pages.Microsoft.Email
         ";
         public const string HtmlBodyPostfix = "";
 
-        public IEnumerable<DisplayMessage> Messages;
-        public string ConversationName;
+        public IEnumerable<DisplayMessage> Messages = null!;
+        public string ConversationName = null!;
 
         GraphServiceClient Graph;
 

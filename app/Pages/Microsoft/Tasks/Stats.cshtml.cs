@@ -10,7 +10,7 @@ namespace app.Pages.Microsoft.Tasks
 {
     public class StatsModel : MicrosoftPageModel
     {
-        public IEnumerable<DisplayWeek> Weeks;
+        public IEnumerable<DisplayWeek> Weeks = null!;
 
         GraphServiceClient Graph;
 
