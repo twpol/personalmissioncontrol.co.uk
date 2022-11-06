@@ -83,7 +83,7 @@ namespace app.Services.Data
 
         TaskModel FromGraph(TodoTask task)
         {
-            return new TaskModel(task.Id, task.Title, task.Importance == Importance.High, task.Status == Microsoft.Graph.TaskStatus.Completed ? GetDTO(task.CompletedDateTime) : null);
+            return new TaskModel(task.Id, task.Title, task.Importance == Importance.High, task.CreatedDateTime ?? DateTimeOffset.MinValue, task.Status == Microsoft.Graph.TaskStatus.Completed ? GetDTO(task.CompletedDateTime) : null);
         }
     }
 }

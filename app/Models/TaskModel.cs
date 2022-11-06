@@ -2,7 +2,7 @@ using System;
 
 namespace app.Models
 {
-    public record TaskModel(string Id, string Title, bool IsImportant, DateTimeOffset? Completed)
+    public record TaskModel(string Id, string Title, bool IsImportant, DateTimeOffset Created, DateTimeOffset? Completed)
     {
         public string Classes => "task " + (IsCompleted ? "task--completed text-black-50" : "task--uncompleted") + " " + (IsImportant ? "task--important" : "task--unimportant");
         public bool IsCompleted => Completed.HasValue;

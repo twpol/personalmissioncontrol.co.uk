@@ -30,7 +30,7 @@ namespace app.Pages
             {
                 tasks.AddRange((await _data.GetTasks(list.Id)).Where(task => task.IsImportant && !task.IsCompleted));
             }
-            Tasks = tasks.OrderBy(task => task.SortKey);
+            Tasks = tasks.OrderByDescending(task => task.Created);
         }
     }
 }
