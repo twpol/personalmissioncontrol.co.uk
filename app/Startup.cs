@@ -47,7 +47,7 @@ namespace app
                 options.KnownProxies.Clear();
             });
 
-            services.AddSingleton<DataMemoryCache>();
+            services.AddSingleton(typeof(IModelCache<>), typeof(ModelMemoryCache<>));
 
             services.AddDistributedCosmosCache(options =>
             {
