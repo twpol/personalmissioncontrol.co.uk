@@ -13,12 +13,13 @@ namespace app.Auth
         {
             get
             {
-                if (RealClient == null) throw new InvalidOperationException("Microsoft Graph client not initialised");
-                return RealClient;
+                if (MaybeClient == null) throw new InvalidOperationException("Microsoft Graph client not initialised");
+                return MaybeClient;
             }
         }
 
-        readonly GraphServiceClient? RealClient;
+        public GraphServiceClient? MaybeClient { get; init; }
+
         readonly string? Authorization;
 
         public MicrosoftGraphProvider(MultipleAuthenticationContext<MicrosoftAccountOptions> authenticationContext)
@@ -28,7 +29,7 @@ namespace app.Auth
                 var type = auth.GetTokenValue("token_type");
                 var token = auth.GetTokenValue("access_token");
                 Authorization = $"{type} {token}";
-                RealClient = new GraphServiceClient(this);
+                MaybeClient = new GraphServiceClient(this);
             }
         }
 
