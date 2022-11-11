@@ -21,6 +21,9 @@ namespace app.Pages.Microsoft.Email
                 pre {
                     white-space: pre-wrap;
                 }
+                body.pmc-plain-text pre {
+                    font-family: inherit;
+                }
             </style>
         ";
         public const string HtmlBodyPostfix = "";
@@ -68,7 +71,7 @@ namespace app.Pages.Microsoft.Email
                     message.IsRead == false,
                     message.Flag.FlagStatus == FollowupFlagStatus.Flagged,
                     message.Flag.FlagStatus == FollowupFlagStatus.Complete,
-                    message.Body.Content
+                    GetHtmlBody(message.Body)
                 ));
         }
 
@@ -96,6 +99,17 @@ namespace app.Pages.Microsoft.Email
                 if (subject.StartsWith("fwd:", StringComparison.OrdinalIgnoreCase)) subject = subject.Substring(4);
             } while (length != subject.Length);
             return subject;
+        }
+
+        string GetHtmlBody(ItemBody body)
+        {
+            if (body.ContentType == BodyType.Text)
+            {
+                return "<body class=pmc-plain-text><pre>"
+                    + body.Content.Replace("&", "&amp;").Replace("<", "&lt;").Replace(">", "&gt;")
+                    + "</pre></body>";
+            }
+            return body.Content;
         }
 
         public record DisplayMessage(string Id, DateTimeOffset Date, EmailAddress From, EmailAddress To, bool Unread, bool Flagged, bool Completed, string HtmlBody)
