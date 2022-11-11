@@ -15,7 +15,7 @@ namespace app.Controllers.Microsoft
     public class EmailController : ControllerBase
     {
         [HttpGet("status")]
-        public async Task<IActionResult> Status(string id, MicrosoftGraphProvider graphProvider)
+        public async Task<IActionResult> Status(string id, [FromServices] MicrosoftGraphProvider graphProvider)
         {
             var message = await graphProvider.Client.Me.Messages[id].Request()
                 .Select(message => new
@@ -32,7 +32,7 @@ namespace app.Controllers.Microsoft
         }
 
         [HttpPost("status")]
-        public async Task<IActionResult> Status(string id, bool? unread, bool? flagged, bool? completed, MicrosoftGraphProvider graphProvider)
+        public async Task<IActionResult> Status(string id, bool? unread, bool? flagged, bool? completed, [FromServices] MicrosoftGraphProvider graphProvider)
         {
             var message = new Message();
             if (unread.HasValue) message.IsRead = !unread.Value;
