@@ -39,6 +39,9 @@ namespace app.Auth
 
     public class MultipleAuthenticationHandler : SignInAuthenticationHandler<MultipleAuthenticationOptions>
     {
+        const string IdentitySchemeKey = ".Identity.Scheme";
+        const string IdentityAccountKey = ".Identity.Account";
+
         public MultipleAuthenticationHandler(IOptionsMonitor<MultipleAuthenticationOptions> options, ILoggerFactory logger, UrlEncoder encoder, ISystemClock clock) : base(options, logger, encoder, clock)
         {
         }
@@ -50,19 +53,44 @@ namespace app.Auth
 
         protected override Task HandleSignInAsync(ClaimsPrincipal user, AuthenticationProperties? properties)
         {
-            if (user.Identity == null) return Task.CompletedTask;
-            if (Logger.IsEnabled(LogLevel.Debug)) Logger.LogDebug($"HandleSignInAsync({user.Identity.AuthenticationType}/{user.Identity.Name})");
+            if (user.Identity == null || properties == null) return Task.CompletedTask;
 
-            var principal = GetCurrentPrincipal();
-            var nameId = user.Claims.FirstOrDefault(claim => claim.Type == ClaimTypes.NameIdentifier)?.Value ?? "";
-            var existing = principal.Identities.Where(identity => identity.AuthenticationType == user.Identity.AuthenticationType && identity.HasClaim(ClaimTypes.NameIdentifier, nameId));
-            if (existing.Any()) principal = new ClaimsPrincipal(principal.Identities.Except(existing));
+            var scheme = user.Identity.AuthenticationType;
+            var account = user.FindFirstValue(ClaimTypes.NameIdentifier);
+            properties.SetString(IdentitySchemeKey, scheme);
+            properties.SetString(IdentityAccountKey, account);
+            if (Logger.IsEnabled(LogLevel.Debug)) Logger.LogDebug($"HandleSignInAsync({scheme}/{account})");
+
+            var principal = GetCurrentPrincipal(identity => identity.AuthenticationType == scheme);
             principal.AddIdentities(user.Identities);
             SetCurrentPrincipal(principal);
 
-            Context.Session.Set($"multiple-authentication-properties-{user.Identity.AuthenticationType}", JsonSerializer.SerializeToUtf8Bytes(properties));
+            Context.Session.Set($"multiple-authentication-properties-{scheme}", JsonSerializer.SerializeToUtf8Bytes(properties));
 
             return Task.CompletedTask;
+        }
+
+        protected override Task HandleSignOutAsync(AuthenticationProperties? properties)
+        {
+            if (properties == null) return Task.CompletedTask;
+
+            var scheme = properties.GetString(IdentitySchemeKey) ?? properties.GetString(".AuthScheme");
+            var account = properties.GetString(IdentityAccountKey);
+            if (Logger.IsEnabled(LogLevel.Debug)) Logger.LogDebug($"HandleSignOutAsync({scheme}/{account})");
+
+            var principal = GetCurrentPrincipal(identity => identity.AuthenticationType == scheme);
+            SetCurrentPrincipal(principal);
+
+            Context.Session.Remove($"multiple-authentication-properties-{scheme}");
+
+            return Task.CompletedTask;
+        }
+
+        ClaimsPrincipal GetCurrentPrincipal(Func<ClaimsIdentity, bool> existingFilter)
+        {
+            var principal = GetCurrentPrincipal();
+            var existing = principal.Identities.Where(existingFilter);
+            return existing.Any() ? new ClaimsPrincipal(principal.Identities.Except(existing)) : principal;
         }
 
         ClaimsPrincipal GetCurrentPrincipal()
@@ -86,11 +114,6 @@ namespace app.Auth
             using var writer = new BinaryWriter(stream);
             principal.WriteTo(writer);
             Context.Session.Set($"multiple-authentication-principal-{Scheme.Name}", JsonSerializer.SerializeToUtf8Bytes(stream.ToArray()));
-        }
-
-        protected override Task HandleSignOutAsync(AuthenticationProperties? properties)
-        {
-            throw new NotImplementedException();
         }
     }
 
@@ -146,49 +169,53 @@ namespace app.Auth
         public bool TryGetAuthentication(string scheme, [NotNullWhen(true)] out AuthenticationProperties? value)
         {
             value = null;
-            if (ContextAccessor.HttpContext?.Session.TryGetValue($"multiple-authentication-properties-{scheme}", out var propertiesData) ?? false)
+            if (!(ContextAccessor.HttpContext?.Session.TryGetValue($"multiple-authentication-properties-{scheme}", out var propertiesData) ?? false)) return false;
+
+            var json = JsonSerializer.Deserialize<AuthenticationPropertiesJson>(propertiesData);
+            if (json == null) return false;
+
+            value = new AuthenticationProperties(json.Items);
+            var expiresAt = value.GetTokenValue("expires_at");
+            var refreshToken = value.GetTokenValue("refresh_token");
+            if (expiresAt == null || refreshToken == null || (DateTimeOffset.Parse(expiresAt) - DateTimeOffset.Now).TotalMinutes > 5) return true;
+
+            // At this point, we need to refresh the nearly or actually expired token
+            var options = OptionsMonitor.Get(scheme);
+            var content = new FormUrlEncodedContent(new Dictionary<string, string>
             {
-                var json = JsonSerializer.Deserialize<AuthenticationPropertiesJson>(propertiesData);
-                if (json == null) return false;
-
-                value = new AuthenticationProperties(json.Items);
-                var expiresAt = value.GetTokenValue("expires_at");
-                var refreshToken = value.GetTokenValue("refresh_token");
-                if (expiresAt != null && refreshToken != null && (DateTimeOffset.Parse(expiresAt) - DateTimeOffset.Now).TotalMinutes < 5)
+                { "client_id", options.ClientId },
+                { "client_secret", options.ClientSecret },
+                { "grant_type", "refresh_token" },
+                { "refresh_token", refreshToken },
+            });
+            var response = options.Backchannel.PostAsync(options.TokenEndpoint, content, ContextAccessor.HttpContext.RequestAborted).Result;
+            if (response.IsSuccessStatusCode)
+            {
+                using (var payload = JsonDocument.Parse(response.Content.ReadAsStringAsync().Result))
                 {
-                    var options = OptionsMonitor.Get(scheme);
-                    var content = new FormUrlEncodedContent(new Dictionary<string, string>
+                    var newAccessToken = payload.RootElement.GetString("access_token");
+                    var newRefreshToken = payload.RootElement.GetString("refresh_token");
+                    if (newAccessToken != null && newRefreshToken != null)
                     {
-                        { "client_id", options.ClientId },
-                        { "client_secret", options.ClientSecret },
-                        { "grant_type", "refresh_token" },
-                        { "refresh_token", refreshToken },
-                    });
-                    var response = options.Backchannel.PostAsync(options.TokenEndpoint, content, ContextAccessor.HttpContext.RequestAborted).Result;
-                    response.EnsureSuccessStatusCode();
-
-                    using (var payload = JsonDocument.Parse(response.Content.ReadAsStringAsync().Result))
-                    {
-                        var newAccessToken = payload.RootElement.GetString("access_token");
-                        var newRefreshToken = payload.RootElement.GetString("refresh_token");
-                        if (newAccessToken != null && newRefreshToken != null)
+                        value.UpdateTokenValue("access_token", newAccessToken);
+                        value.UpdateTokenValue("refresh_token", newRefreshToken);
+                        if (payload.RootElement.TryGetProperty("expires_in", out var property) && property.TryGetInt32(out var seconds))
                         {
-                            value.UpdateTokenValue("access_token", newAccessToken);
-                            value.UpdateTokenValue("refresh_token", newRefreshToken);
-                            if (payload.RootElement.TryGetProperty("expires_in", out var property) && property.TryGetInt32(out var seconds))
-                            {
-                                var newExpiresAt = DateTimeOffset.UtcNow + TimeSpan.FromSeconds(seconds);
-                                value.UpdateTokenValue("expires_at", newExpiresAt.ToString("o", CultureInfo.InvariantCulture));
-                            }
-                            var user = ContextAccessor.HttpContext.AuthenticateAsync().Result.Principal;
-                            if (user != null) ContextAccessor.HttpContext.SignInAsync(user, value).Wait();
+                            var newExpiresAt = DateTimeOffset.UtcNow + TimeSpan.FromSeconds(seconds);
+                            value.UpdateTokenValue("expires_at", newExpiresAt.ToString("o", CultureInfo.InvariantCulture));
+                        }
+                        var user = ContextAccessor.HttpContext.AuthenticateAsync().Result.Principal;
+                        if (user != null)
+                        {
+                            ContextAccessor.HttpContext.SignInAsync(user, value).Wait();
+                            return true;
                         }
                     }
                 }
-
-                return true;
             }
 
+            // We failed to refresh the expired token, log out of this account
+            ContextAccessor.HttpContext.SignOutAsync(value);
             return false;
         }
     }
