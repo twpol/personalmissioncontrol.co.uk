@@ -31,12 +31,21 @@ namespace app.Auth
         public static AuthenticationBuilder AddMultiple(this AuthenticationBuilder builder, Action<MultipleAuthenticationOptions> configureOptions) => builder.AddMultiple(MultipleAuthenticationDefaults.AuthenticationScheme, configureOptions);
         public static AuthenticationBuilder AddMultiple(this AuthenticationBuilder builder, string authenticationScheme, Action<MultipleAuthenticationOptions> configureOptions) => builder.AddMultiple(authenticationScheme, MultipleAuthenticationDefaults.DisplayName, configureOptions);
         public static AuthenticationBuilder AddMultiple(this AuthenticationBuilder builder, string authenticationScheme, string displayName, Action<MultipleAuthenticationOptions> configureOptions) => builder.AddScheme<MultipleAuthenticationOptions, MultipleAuthenticationHandler>(authenticationScheme, displayName, configureOptions);
+
         public static bool TryGetIdentity(this HttpContext context, string scheme, [NotNullWhen(true)] out ClaimsIdentity? value)
         {
             value = context.User.Identities.FirstOrDefault(id => id.AuthenticationType == scheme);
             return value != null;
         }
+
         public static string? FindFirstValue(this ClaimsIdentity identity, string type) => identity.FindFirst(type)?.Value;
+        public static string GetId(this ClaimsIdentity identity) => identity.FindFirstValue(ClaimTypes.NameIdentifier) ?? "";
+        public static string GetName(this ClaimsIdentity identity) => identity.FindFirstValue(ClaimTypes.Name) ?? $"{identity.FindFirstValue(ClaimTypes.GivenName)} {identity.FindFirstValue(ClaimTypes.Surname)}";
+        public static string? GetAccountId(this ClaimsIdentity identity) => identity.AuthenticationType != null ? $"{identity.AuthenticationType}:{identity.FindFirstValue(ClaimTypes.NameIdentifier)}" : null;
+
+        const string AccountIdKey = ".AccountId";
+        internal static void SetAccountId(this AuthenticationProperties properties, string account) => properties.SetString(AccountIdKey, account);
+        public static string? GetAccountId(this AuthenticationProperties properties) => properties.GetString(AccountIdKey);
     }
 
     public class MultipleAuthenticationOptions : AuthenticationSchemeOptions
@@ -45,9 +54,6 @@ namespace app.Auth
 
     public class MultipleAuthenticationHandler : SignInAuthenticationHandler<MultipleAuthenticationOptions>
     {
-        const string IdentitySchemeKey = ".Identity.Scheme";
-        const string IdentityAccountKey = ".Identity.Account";
-
         public MultipleAuthenticationHandler(IOptionsMonitor<MultipleAuthenticationOptions> options, ILoggerFactory logger, UrlEncoder encoder, ISystemClock clock) : base(options, logger, encoder, clock)
         {
         }
@@ -59,35 +65,32 @@ namespace app.Auth
 
         protected override Task HandleSignInAsync(ClaimsPrincipal user, AuthenticationProperties? properties)
         {
-            if (user.Identity == null || properties == null) return Task.CompletedTask;
+            var accountId = (user.Identity as ClaimsIdentity)?.GetAccountId();
+            if (accountId == null || properties == null) return Task.CompletedTask;
 
-            var scheme = user.Identity.AuthenticationType;
-            var account = user.FindFirstValue(ClaimTypes.NameIdentifier);
-            properties.SetString(IdentitySchemeKey, scheme);
-            properties.SetString(IdentityAccountKey, account);
-            if (Logger.IsEnabled(LogLevel.Debug)) Logger.LogDebug($"HandleSignInAsync({scheme}/{account})");
+            properties.SetAccountId(accountId);
+            if (Logger.IsEnabled(LogLevel.Debug)) Logger.LogDebug($"HandleSignInAsync({accountId})");
 
-            var principal = GetCurrentPrincipal(identity => identity.AuthenticationType == scheme);
+            var principal = GetCurrentPrincipal(identity => identity.GetAccountId() == accountId);
             principal.AddIdentities(user.Identities);
             SetCurrentPrincipal(principal);
 
-            Context.Session.Set($"multiple-authentication-properties-{scheme}", JsonSerializer.SerializeToUtf8Bytes(properties));
+            Context.Session.Set($"{nameof(MultipleAuthenticationHandler)}:Properties:{accountId}", JsonSerializer.SerializeToUtf8Bytes(properties));
 
             return Task.CompletedTask;
         }
 
         protected override Task HandleSignOutAsync(AuthenticationProperties? properties)
         {
-            if (properties == null) return Task.CompletedTask;
+            var accountId = properties?.GetAccountId();
+            if (accountId == null) return Task.CompletedTask;
 
-            var scheme = properties.GetString(IdentitySchemeKey) ?? properties.GetString(".AuthScheme");
-            var account = properties.GetString(IdentityAccountKey);
-            if (Logger.IsEnabled(LogLevel.Debug)) Logger.LogDebug($"HandleSignOutAsync({scheme}/{account})");
+            if (Logger.IsEnabled(LogLevel.Debug)) Logger.LogDebug($"HandleSignOutAsync({accountId})");
 
-            var principal = GetCurrentPrincipal(identity => identity.AuthenticationType == scheme);
+            var principal = GetCurrentPrincipal(identity => identity.GetAccountId() == accountId);
             SetCurrentPrincipal(principal);
 
-            Context.Session.Remove($"multiple-authentication-properties-{scheme}");
+            Context.Session.Remove($"{nameof(MultipleAuthenticationHandler)}:Properties:{accountId}");
 
             return Task.CompletedTask;
         }
@@ -101,7 +104,7 @@ namespace app.Auth
 
         ClaimsPrincipal GetCurrentPrincipal()
         {
-            if (Context.Session.TryGetValue($"multiple-authentication-principal-{Scheme.Name}", out var ticketData))
+            if (Context.Session.TryGetValue($"{nameof(MultipleAuthenticationHandler)}:Principal", out var ticketData))
             {
                 var bytes = JsonSerializer.Deserialize<byte[]>(ticketData);
                 if (bytes != null)
@@ -119,7 +122,7 @@ namespace app.Auth
             using var stream = new MemoryStream();
             using var writer = new BinaryWriter(stream);
             principal.WriteTo(writer);
-            Context.Session.Set($"multiple-authentication-principal-{Scheme.Name}", JsonSerializer.SerializeToUtf8Bytes(stream.ToArray()));
+            Context.Session.Set($"{nameof(MultipleAuthenticationHandler)}:Principal", JsonSerializer.SerializeToUtf8Bytes(stream.ToArray()));
         }
     }
 
@@ -175,7 +178,11 @@ namespace app.Auth
         public bool TryGetAuthentication(string scheme, [NotNullWhen(true)] out AuthenticationProperties? value)
         {
             value = null;
-            if (!(ContextAccessor.HttpContext?.Session.TryGetValue($"multiple-authentication-properties-{scheme}", out var propertiesData) ?? false)) return false;
+            var sessionKeyPrefix = $"{nameof(MultipleAuthenticationHandler)}:Properties:{scheme}:";
+            var sessions = ContextAccessor.HttpContext?.Session.Keys.Where(key => key.StartsWith(sessionKeyPrefix));
+            if (sessions == null || !sessions.Any()) return false;
+            // TODO: This will need refactoring to support multiple authentications to the same provider
+            if (!(ContextAccessor.HttpContext?.Session.TryGetValue(sessions.First(), out var propertiesData) ?? false)) return false;
 
             var json = JsonSerializer.Deserialize<AuthenticationPropertiesJson>(propertiesData);
             if (json == null) return false;

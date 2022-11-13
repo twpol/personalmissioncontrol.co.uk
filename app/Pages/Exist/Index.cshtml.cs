@@ -16,8 +16,8 @@ namespace app.Pages.Exist
         {
             if (HttpContext.TryGetIdentity("Exist", out var identity))
             {
-                UserID = identity.FindFirstValue(ClaimTypes.NameIdentifier) ?? "";
-                UserName = identity.FindFirstValue(ClaimTypes.Name) ?? "";
+                UserID = identity.GetId();
+                UserName = identity.GetName();
             }
         }
     }

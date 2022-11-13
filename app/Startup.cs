@@ -76,12 +76,11 @@ namespace app
                     options.ClientSecret = Configuration["Authentication:Exist:ClientSecret"];
                     options.AuthorizationEndpoint = "https://exist.io/oauth2/authorize";
                     options.TokenEndpoint = "https://exist.io/oauth2/access_token";
-                    options.UserInformationEndpoint = "https://exist.io/api/1/users/$self/profile/";
+                    options.UserInformationEndpoint = "https://exist.io/api/2/accounts/profile/";
                     options.Scope.Add("custom_read");
                     options.CallbackPath = "/signin-exist";
                     options.SaveTokens = true;
-                    options.ClaimActions.MapJsonKey(ClaimTypes.NameIdentifier, "id");
-                    options.ClaimActions.MapJsonKey(ClaimTypes.Name, "username");
+                    options.ClaimActions.MapJsonKey(ClaimTypes.NameIdentifier, "username");
                     options.ClaimActions.MapJsonKey(ClaimTypes.GivenName, "first_name");
                     options.ClaimActions.MapJsonKey(ClaimTypes.Surname, "last_name");
                     options.ForwardAuthenticate = MultipleAuthenticationDefaults.AuthenticationScheme;
