@@ -21,7 +21,7 @@ namespace app.Services.Data
 
         public MicrosoftData(MicrosoftGraphProvider provider, IModelCache<IList<TodoTaskList>> taskListCache, IModelCache<IList<TaskModel>> taskCache)
         {
-            Graph = provider.Client;
+            Graph = provider.MaybeClient;
             TaskListCache = taskListCache;
             TaskCache = taskCache;
         }

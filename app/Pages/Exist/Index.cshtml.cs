@@ -1,9 +1,9 @@
 using System.Security.Claims;
 using app.Auth;
 
-namespace app.Pages.Microsoft
+namespace app.Pages.Exist
 {
-    public class IndexModel : MicrosoftPageModel
+    public class IndexModel : ExistPageModel
     {
         public string UserID { get; set; } = null!;
         public string UserName { get; set; } = null!;
@@ -14,7 +14,7 @@ namespace app.Pages.Microsoft
 
         public void OnGet()
         {
-            if (HttpContext.TryGetIdentity("Microsoft", out var identity))
+            if (HttpContext.TryGetIdentity("Exist", out var identity))
             {
                 UserID = identity.FindFirstValue(ClaimTypes.NameIdentifier) ?? "";
                 UserName = identity.FindFirstValue(ClaimTypes.Name) ?? "";

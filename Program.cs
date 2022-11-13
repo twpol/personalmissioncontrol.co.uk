@@ -177,6 +177,8 @@ class Program
                     {
                         new() { Name = "WEBSITE_RUN_FROM_PACKAGE", Value = appBlobUrl },
                         new() { Name = "APPINSIGHTS_INSTRUMENTATIONKEY", Value = appInsight.InstrumentationKey },
+                        new() { Name = "Authentication__Exist__ClientId", Value = config.Require("exist-client-id") },
+                        new() { Name = "Authentication__Exist__ClientSecret", Value = config.RequireSecret("exist-client-secret") },
                         new() { Name = "Authentication__Microsoft__ClientId", Value = appReg.ApplicationId },
                         new() { Name = "Authentication__Microsoft__ClientSecret", Value = appRegSecret.Value },
                         new() { Name = "Instrumentation__Honeycomb__ApiKey", Value = config.RequireSecret("honeycomb-apikey") },
