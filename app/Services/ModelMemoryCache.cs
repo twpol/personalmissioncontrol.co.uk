@@ -1,3 +1,4 @@
+using System;
 using System.IO;
 using System.Text.Json;
 using System.Threading.Tasks;
@@ -43,6 +44,7 @@ namespace app.Services
             Cache.Set(key, value, new MemoryCacheEntryOptions()
             {
                 Size = stream.Length,
+                AbsoluteExpirationRelativeToNow = TimeSpan.FromHours(1),
             });
         }
     }

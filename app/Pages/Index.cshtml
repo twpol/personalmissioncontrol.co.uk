@@ -10,6 +10,15 @@
     <h1 class="display-4">Welcome</h1>
 </div>
 
+<h1>Habits</h1>
+
+<ul class="tasks list-unstyled m-0">
+    @foreach (var habit in Model.Habits)
+    {
+        @await Html.PartialAsync("_Habit", habit)
+    }
+</ul>
+
 <h1>Tasks</h1>
 
 <ul class="tasks list-unstyled m-0">

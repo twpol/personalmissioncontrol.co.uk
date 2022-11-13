@@ -13,22 +13,26 @@ namespace app.Pages
     public class IndexModel : PageModel
     {
         public IEnumerable<TaskModel> Tasks = null!;
+        public IEnumerable<HabitModel> Habits = null!;
 
-        private readonly ILogger<IndexModel> _logger;
-        private readonly MicrosoftData _data;
+        readonly ILogger<IndexModel> _logger;
+        readonly ExistData Exist;
+        readonly MicrosoftData Microsoft;
 
-        public IndexModel(ILogger<IndexModel> logger, MicrosoftData data)
+        public IndexModel(ILogger<IndexModel> logger, ExistData exist, MicrosoftData microsoft)
         {
             _logger = logger;
-            _data = data;
+            Exist = exist;
+            Microsoft = microsoft;
         }
 
         public async Task OnGet()
         {
+            Habits = await Exist.GetHabits();
             var tasks = new List<TaskModel>();
-            foreach (var list in await _data.GetLists())
+            foreach (var list in await Microsoft.GetLists())
             {
-                tasks.AddRange((await _data.GetTasks(list.Id)).Where(task => task.IsImportant && !task.IsCompleted));
+                tasks.AddRange((await Microsoft.GetTasks(list.Id)).Where(task => task.IsImportant && !task.IsCompleted));
             }
             Tasks = tasks.OrderByDescending(task => task.Created);
         }

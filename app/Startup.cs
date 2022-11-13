@@ -5,6 +5,7 @@ using app.Services;
 using app.Services.Data;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.MicrosoftAccount;
+using Microsoft.AspNetCore.Authentication.OAuth;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
@@ -76,7 +77,7 @@ namespace app
                     options.AuthorizationEndpoint = "https://exist.io/oauth2/authorize";
                     options.TokenEndpoint = "https://exist.io/oauth2/access_token";
                     options.UserInformationEndpoint = "https://exist.io/api/1/users/$self/profile/";
-                    options.Scope.Add("read");
+                    options.Scope.Add("custom_read");
                     options.CallbackPath = "/signin-exist";
                     options.SaveTokens = true;
                     options.ClaimActions.MapJsonKey(ClaimTypes.NameIdentifier, "id");
@@ -103,9 +104,13 @@ namespace app
             });
 
             services.AddSingleton<IAuthorizationMiddlewareResultHandler, MultipleAuthenticationAuthorizationMiddlewareResultHandler>();
+            services.AddSingleton<MultipleAuthenticationContext<OAuthOptions>>();
             services.AddSingleton<MultipleAuthenticationContext<MicrosoftAccountOptions>>();
 
+            services.AddScoped<OAuthProvider>();
             services.AddScoped<MicrosoftGraphProvider>();
+
+            services.AddScoped<ExistData>();
             services.AddScoped<MicrosoftData>();
 
             services.AddControllers();
