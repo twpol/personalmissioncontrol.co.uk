@@ -1,4 +1,5 @@
 using System;
+using System.Diagnostics;
 using System.Security.Claims;
 using app.Auth;
 using app.Services;
@@ -26,6 +27,8 @@ namespace app
             Configuration = configuration;
         }
 
+        public static readonly ActivitySource ActivitySource = new("pmc");
+
         public IConfiguration Configuration { get; }
 
         // This method gets called by the runtime. Use this method to add services to the container.
@@ -33,7 +36,8 @@ namespace app
         {
             services.AddApplicationInsightsTelemetry();
             services.AddOpenTelemetryTracing(builder => builder
-                .SetResourceBuilder(ResourceBuilder.CreateDefault().AddService("pmc"))
+                .SetResourceBuilder(ResourceBuilder.CreateDefault().AddService(ActivitySource.Name))
+                .AddSource(ActivitySource.Name)
                 .AddAspNetCoreInstrumentation()
                 .AddHttpClientInstrumentation()
                 .AddOtlpExporter(options =>
