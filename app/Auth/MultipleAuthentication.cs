@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
 using System.IO;
@@ -60,7 +61,9 @@ namespace app.Auth
 
         protected override Task<AuthenticateResult> HandleAuthenticateAsync()
         {
-            return Task.FromResult(AuthenticateResult.Success(new AuthenticationTicket(GetCurrentPrincipal(), Scheme.Name)));
+            var principal = GetCurrentPrincipal();
+            Activity.Current?.SetTag("auth.account_ids", String.Join(" ", principal.Identities.Select(identity => identity.GetAccountId())));
+            return Task.FromResult(AuthenticateResult.Success(new AuthenticationTicket(principal, Scheme.Name)));
         }
 
         protected override Task HandleSignInAsync(ClaimsPrincipal user, AuthenticationProperties? properties)
@@ -70,6 +73,10 @@ namespace app.Auth
 
             properties.SetAccountId(accountId);
             if (Logger.IsEnabled(LogLevel.Debug)) Logger.LogDebug($"HandleSignInAsync({accountId})");
+            Activity.Current?.AddEvent(new("HandleSignInAsync", tags: new()
+            {
+                { "auth.account_id", accountId },
+            }));
 
             var principal = GetCurrentPrincipal(identity => identity.GetAccountId() == accountId);
             principal.AddIdentities(user.Identities);
@@ -86,6 +93,10 @@ namespace app.Auth
             if (accountId == null) return Task.CompletedTask;
 
             if (Logger.IsEnabled(LogLevel.Debug)) Logger.LogDebug($"HandleSignOutAsync({accountId})");
+            Activity.Current?.AddEvent(new("HandleSignOutAsync", tags: new()
+            {
+                { "auth.account_id", accountId },
+            }));
 
             var principal = GetCurrentPrincipal(identity => identity.GetAccountId() == accountId);
             SetCurrentPrincipal(principal);
@@ -177,6 +188,11 @@ namespace app.Auth
 
         public bool TryGetAuthentication(string scheme, [NotNullWhen(true)] out AuthenticationProperties? value)
         {
+            using var activity = Startup.ActivitySource.StartActivity();
+            activity?.SetTag("auth.scheme", scheme);
+            activity?.SetTag("auth.refresh", false);
+            activity?.SetTag("auth.success", false);
+
             value = null;
             var sessionKeyPrefix = $"{nameof(MultipleAuthenticationHandler)}:Properties:{scheme}:";
             var sessions = ContextAccessor.HttpContext?.Session.Keys.Where(key => key.StartsWith(sessionKeyPrefix));
@@ -190,7 +206,15 @@ namespace app.Auth
             value = new AuthenticationProperties(json.Items);
             var expiresAt = value.GetTokenValue("expires_at");
             var refreshToken = value.GetTokenValue("refresh_token");
-            if (expiresAt == null || refreshToken == null || (DateTimeOffset.Parse(expiresAt) - DateTimeOffset.Now).TotalMinutes > 5) return true;
+            activity?.SetTag("auth.account_id", value.GetAccountId());
+            activity?.SetTag("auth.expires_at", expiresAt);
+            activity?.SetTag("auth.refresh_token_exists", refreshToken != null);
+            if (expiresAt == null || refreshToken == null || (DateTimeOffset.Parse(expiresAt) - DateTimeOffset.Now).TotalMinutes > 5)
+            {
+                activity?.SetTag("auth.success", true);
+                return true;
+            }
+            activity?.SetTag("auth.refresh", true);
 
             // At this point, we need to refresh the nearly or actually expired token
             var options = OptionsMonitor.Get(scheme);
@@ -202,6 +226,7 @@ namespace app.Auth
                 { "refresh_token", refreshToken },
             });
             var response = options.Backchannel.PostAsync(options.TokenEndpoint, content, ContextAccessor.HttpContext.RequestAborted).Result;
+            activity?.SetTag("auth.refresh_status_code", (int)response.StatusCode);
             if (response.IsSuccessStatusCode)
             {
                 using (var payload = JsonDocument.Parse(response.Content.ReadAsStringAsync().Result))
@@ -216,11 +241,13 @@ namespace app.Auth
                         {
                             var newExpiresAt = DateTimeOffset.UtcNow + TimeSpan.FromSeconds(seconds);
                             value.UpdateTokenValue("expires_at", newExpiresAt.ToString("o", CultureInfo.InvariantCulture));
+                            activity?.SetTag("auth.expires_at_new", value.GetTokenValue("expires_at"));
                         }
                         var user = ContextAccessor.HttpContext.AuthenticateAsync().Result.Principal;
                         if (user != null)
                         {
                             ContextAccessor.HttpContext.SignInAsync(user, value).Wait();
+                            activity?.SetTag("auth.success", true);
                             return true;
                         }
                     }
