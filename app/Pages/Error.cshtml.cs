@@ -12,11 +12,11 @@ namespace app.Pages
 
         public bool ShowRequestId => !string.IsNullOrEmpty(RequestId);
 
-        private readonly ILogger<ErrorModel> _logger;
+        readonly ILogger<ErrorModel> Logger;
 
         public ErrorModel(ILogger<ErrorModel> logger)
         {
-            _logger = logger;
+            Logger = logger;
         }
 
         public void OnGet()

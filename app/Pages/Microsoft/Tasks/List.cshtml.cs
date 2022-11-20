@@ -16,8 +16,8 @@ namespace app.Pages.Microsoft.Tasks
         public IEnumerable<TaskModel> Tasks = null!;
         public bool Nested;
 
-        GraphServiceClient Graph;
-        MicrosoftData Data;
+        readonly GraphServiceClient Graph;
+        readonly MicrosoftData Data;
 
         public ListModel(MicrosoftGraphProvider graphProvider, MicrosoftData data)
         {

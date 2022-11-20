@@ -15,7 +15,7 @@ namespace app.Services.Data
 {
     public class ExistData
     {
-        static readonly Regex HabitPrefix = new Regex("^(?:[a-z0-9] )?habit (?<flags>(?:[0-9]+p[0-9]+|[0-9]+r|d[0-9-]+) )+(?<name>.*)$");
+        static readonly Regex HabitPrefix = new("^(?:[a-z0-9] )?habit (?<flags>(?:[0-9]+p[0-9]+|[0-9]+r|d[0-9-]+) )+(?<name>.*)$");
         static readonly TextInfo TextInfo = new CultureInfo("en-GB").TextInfo;
 
         readonly ILogger<ExistData> Logger;
@@ -31,7 +31,7 @@ namespace app.Services.Data
 
         public async Task<IList<HabitModel>> GetHabits()
         {
-            if (Channel == null) return new HabitModel[0];
+            if (Channel == null) return Array.Empty<HabitModel>();
             return await GetOrCreateAsync<IList<HabitModel>>(HabitCache, "habits", async () =>
             {
                 var tags = await ExecutePages<ApiTag>("https://exist.io/api/2/attributes/?groups=custom&limit=100");
@@ -45,7 +45,7 @@ namespace app.Services.Data
             return (await cache.GetAsync(key)) ?? (await SetAsync(cache, key, asyncFactory));
         }
 
-        async Task<T> SetAsync<T>(IModelCache<T> cache, string key, Func<Task<T>> asyncFactory) where T : class
+        static async Task<T> SetAsync<T>(IModelCache<T> cache, string key, Func<Task<T>> asyncFactory) where T : class
         {
             var obj = await asyncFactory();
             await cache.SetAsync(key, obj);
@@ -72,12 +72,11 @@ namespace app.Services.Data
             var response = await Channel.SendAsync(request, HttpCompletionOption.ResponseHeadersRead);
             if (Logger.IsEnabled(LogLevel.Debug)) Logger.LogDebug("Execute({0}) = {1}", endpoint, response.StatusCode);
             response.EnsureSuccessStatusCode();
-            var data = JsonSerializer.Deserialize<T>(response.Content.ReadAsStream());
-            if (data == null) throw new InvalidDataException("Failed to parse response");
+            var data = JsonSerializer.Deserialize<T>(response.Content.ReadAsStream()) ?? throw new InvalidDataException("Failed to parse response");
             return data;
         }
 
-        HabitModel? FromApi(ApiTag tag)
+        static HabitModel? FromApi(ApiTag tag)
         {
             var match = HabitPrefix.Match(tag.label);
             if (!match.Success) return null;

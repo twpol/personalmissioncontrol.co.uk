@@ -15,9 +15,9 @@ namespace app.Services.Data
     {
         readonly TimeSpan CacheTimeout = TimeSpan.FromSeconds(30);
 
-        GraphServiceClient? Graph;
-        IModelCache<IList<TodoTaskList>> TaskListCache;
-        IModelCache<IList<TaskModel>> TaskCache;
+        readonly GraphServiceClient? Graph;
+        readonly IModelCache<IList<TodoTaskList>> TaskListCache;
+        readonly IModelCache<IList<TaskModel>> TaskCache;
 
         public MicrosoftData(MicrosoftGraphProvider provider, IModelCache<IList<TodoTaskList>> taskListCache, IModelCache<IList<TaskModel>> taskCache)
         {
@@ -28,7 +28,7 @@ namespace app.Services.Data
 
         public async Task<IList<TodoTaskList>> GetLists()
         {
-            if (Graph == null) return new TodoTaskList[0];
+            if (Graph == null) return Array.Empty<TodoTaskList>();
             return await GetOrCreateAsync<IList<TodoTaskList>>(TaskListCache, "tasks:lists", async () =>
                 await Graph.Me.Todo.Lists.Request().Top(1000).GetAsync()
             );
@@ -36,7 +36,7 @@ namespace app.Services.Data
 
         public async Task<IList<TaskModel>> GetTasks(string list)
         {
-            if (Graph == null) return new TaskModel[0];
+            if (Graph == null) return Array.Empty<TaskModel>();
             return await GetOrCreateAsync<IList<TaskModel>>(TaskCache, $"tasks:list:{list}", async () =>
             {
                 return (await GetAllPages(Graph.Me.Todo.Lists[list].Tasks.Request().Top(1000)))
@@ -51,14 +51,14 @@ namespace app.Services.Data
             return (await cache.GetAsync(key)) ?? (await SetAsync(cache, key, asyncFactory));
         }
 
-        async Task<T> SetAsync<T>(IModelCache<T> cache, string key, Func<Task<T>> asyncFactory) where T : class
+        static async Task<T> SetAsync<T>(IModelCache<T> cache, string key, Func<Task<T>> asyncFactory) where T : class
         {
             var obj = await asyncFactory();
             await cache.SetAsync(key, obj);
             return obj;
         }
 
-        async Task<IList<TodoTask>> GetAllPages(ITodoTaskListTasksCollectionRequest request)
+        static async Task<IList<TodoTask>> GetAllPages(ITodoTaskListTasksCollectionRequest request)
         {
             var list = new List<TodoTask>();
             do
@@ -70,19 +70,17 @@ namespace app.Services.Data
             return list;
         }
 
-        DateTimeOffset? GetDTO(DateTimeTimeZone dateTimeTimeZone)
+        static DateTimeOffset? GetDTO(DateTimeTimeZone dateTimeTimeZone)
         {
             if (dateTimeTimeZone == null) return null;
-            switch (dateTimeTimeZone.TimeZone)
+            return dateTimeTimeZone.TimeZone switch
             {
-                case "UTC":
-                    return DateTimeOffset.ParseExact(dateTimeTimeZone.DateTime + "Z", "o", CultureInfo.InvariantCulture);
-                default:
-                    throw new InvalidDataException($"Unknown time zone: {dateTimeTimeZone.TimeZone}");
-            }
+                "UTC" => (DateTimeOffset?)DateTimeOffset.ParseExact(dateTimeTimeZone.DateTime + "Z", "o", CultureInfo.InvariantCulture),
+                _ => throw new InvalidDataException($"Unknown time zone: {dateTimeTimeZone.TimeZone}"),
+            };
         }
 
-        TaskModel FromGraph(TodoTask task)
+        static TaskModel FromGraph(TodoTask task)
         {
             return new TaskModel(task.Id, task.Title, task.Importance == Importance.High, task.CreatedDateTime ?? DateTimeOffset.MinValue, task.Status == Microsoft.Graph.TaskStatus.Completed ? GetDTO(task.CompletedDateTime) : null);
         }

@@ -11,7 +11,7 @@ namespace app.Services
     {
         readonly ILogger<ModelMemoryCache<T>> Logger;
 
-        readonly MemoryCache Cache = new MemoryCache(new MemoryCacheOptions
+        readonly MemoryCache Cache = new(new MemoryCacheOptions
         {
             // 200 MB to match default distributed memory cache
             SizeLimit = 200 * 1024 * 1024,

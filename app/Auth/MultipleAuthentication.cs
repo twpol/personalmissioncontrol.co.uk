@@ -139,7 +139,7 @@ namespace app.Auth
 
     public class MultipleAuthenticationAuthorizationMiddlewareResultHandler : IAuthorizationMiddlewareResultHandler
     {
-        readonly AuthorizationMiddlewareResultHandler DefaultHandler = new AuthorizationMiddlewareResultHandler();
+        readonly AuthorizationMiddlewareResultHandler DefaultHandler = new();
 
         public async Task HandleAsync(RequestDelegate request, HttpContext context, AuthorizationPolicy policy, PolicyAuthorizationResult result)
         {
@@ -229,27 +229,25 @@ namespace app.Auth
             activity?.SetTag("auth.refresh_status_code", (int)response.StatusCode);
             if (response.IsSuccessStatusCode)
             {
-                using (var payload = JsonDocument.Parse(response.Content.ReadAsStringAsync().Result))
+                using var payload = JsonDocument.Parse(response.Content.ReadAsStringAsync().Result);
+                var newAccessToken = payload.RootElement.GetString("access_token");
+                var newRefreshToken = payload.RootElement.GetString("refresh_token");
+                if (newAccessToken != null && newRefreshToken != null)
                 {
-                    var newAccessToken = payload.RootElement.GetString("access_token");
-                    var newRefreshToken = payload.RootElement.GetString("refresh_token");
-                    if (newAccessToken != null && newRefreshToken != null)
+                    value.UpdateTokenValue("access_token", newAccessToken);
+                    value.UpdateTokenValue("refresh_token", newRefreshToken);
+                    if (payload.RootElement.TryGetProperty("expires_in", out var property) && property.TryGetInt32(out var seconds))
                     {
-                        value.UpdateTokenValue("access_token", newAccessToken);
-                        value.UpdateTokenValue("refresh_token", newRefreshToken);
-                        if (payload.RootElement.TryGetProperty("expires_in", out var property) && property.TryGetInt32(out var seconds))
-                        {
-                            var newExpiresAt = DateTimeOffset.UtcNow + TimeSpan.FromSeconds(seconds);
-                            value.UpdateTokenValue("expires_at", newExpiresAt.ToString("o", CultureInfo.InvariantCulture));
-                            activity?.SetTag("auth.expires_at_new", value.GetTokenValue("expires_at"));
-                        }
-                        var user = ContextAccessor.HttpContext.AuthenticateAsync().Result.Principal;
-                        if (user != null)
-                        {
-                            ContextAccessor.HttpContext.SignInAsync(user, value).Wait();
-                            activity?.SetTag("auth.success", true);
-                            return true;
-                        }
+                        var newExpiresAt = DateTimeOffset.UtcNow + TimeSpan.FromSeconds(seconds);
+                        value.UpdateTokenValue("expires_at", newExpiresAt.ToString("o", CultureInfo.InvariantCulture));
+                        activity?.SetTag("auth.expires_at_new", value.GetTokenValue("expires_at"));
+                    }
+                    var user = ContextAccessor.HttpContext.AuthenticateAsync().Result.Principal;
+                    if (user != null)
+                    {
+                        ContextAccessor.HttpContext.SignInAsync(user, value).Wait();
+                        activity?.SetTag("auth.success", true);
+                        return true;
                     }
                 }
             }
