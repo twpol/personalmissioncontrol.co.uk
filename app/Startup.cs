@@ -47,6 +47,15 @@ namespace app
                 })
             );
 
+            ActivitySource.AddActivityListener(new ActivityListener
+            {
+                ShouldListenTo = _ => true,
+                ActivityStopped = activity =>
+                {
+                    foreach (var (key, value) in activity.Baggage) activity.AddTag(key, value);
+                }
+            });
+
             services.Configure<ForwardedHeadersOptions>(options =>
             {
                 options.ForwardedHeaders = ForwardedHeaders.All;

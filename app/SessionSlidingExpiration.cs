@@ -1,4 +1,5 @@
 using System;
+using System.Diagnostics;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
@@ -24,28 +25,27 @@ namespace app
 
         public async Task InvokeAsync(HttpContext context)
         {
-            EnsureExpiry(context);
-            if (DateTimeOffset.TryParse(context.Session.GetString("SessionSlidingExpiry"), out var expiry))
+            Activity.Current?.SetBaggage("session.id", context.Session.Id);
+            if (DateTimeOffset.TryParse(context.Session.GetString("SessionSlidingExpiry"), out var expiry) &&
+                DateTimeOffset.TryParse(context.Session.GetString("SessionSlidingRefresh"), out var refresh))
             {
-                if (Logger.IsEnabled(LogLevel.Debug)) Logger.LogDebug($"Got expiry of {expiry}");
-                if (DateTimeOffset.Now > expiry) ExtendExpiry(context);
+                if (Logger.IsEnabled(LogLevel.Debug)) Logger.LogDebug($"Got expiry of {expiry} and refresh of {refresh}");
+                Activity.Current?.SetTag("session.expiry", expiry.ToString("o"));
+                Activity.Current?.SetTag("session.refresh", refresh.ToString("o"));
+                if (DateTimeOffset.Now > refresh) ExtendExpiry(context);
+            }
+            else
+            {
+                if (Logger.IsEnabled(LogLevel.Debug)) Logger.LogDebug($"Missing or invalid expiry/refresh");
+                ExtendExpiry(context);
             }
             await Next(context);
         }
 
-        void EnsureExpiry(HttpContext context)
-        {
-            if (!context.Session.TryGetValue("SessionSlidingExpiry", out var _))
-            {
-                var expiry = DateTimeOffset.UtcNow.Add(IdleTimeout / 2);
-                context.Session.SetString("SessionSlidingExpiry", expiry.ToString("o"));
-                if (Logger.IsEnabled(LogLevel.Debug)) Logger.LogDebug($"Set expiry to {expiry}");
-            }
-        }
-
         void ExtendExpiry(HttpContext context)
         {
-            var expiry = DateTimeOffset.UtcNow.Add(IdleTimeout / 2);
+            var expiry = DateTimeOffset.UtcNow.Add(IdleTimeout);
+            var refresh = DateTimeOffset.UtcNow.Add(IdleTimeout / 2);
             var cookieOptions = CookieBuilder.Build(context);
             if (CookieBuilder.Name == null) return;
 
@@ -54,7 +54,10 @@ namespace app
 
             context.Response.Cookies.Append(CookieBuilder.Name, value, cookieOptions);
             context.Session.SetString("SessionSlidingExpiry", expiry.ToString("o"));
-            if (Logger.IsEnabled(LogLevel.Debug)) Logger.LogDebug($"Extended expiry to {expiry}");
+            context.Session.SetString("SessionSlidingRefresh", refresh.ToString("o"));
+            if (Logger.IsEnabled(LogLevel.Debug)) Logger.LogDebug($"Extended expiry to {expiry} and refresh to {refresh}");
+            Activity.Current?.SetTag("session.expiry_new", expiry.ToString("o"));
+            Activity.Current?.SetTag("session.refresh_new", refresh.ToString("o"));
         }
     }
 
