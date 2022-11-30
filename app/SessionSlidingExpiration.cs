@@ -1,4 +1,5 @@
 using System;
+using System.Diagnostics;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
@@ -24,10 +25,12 @@ namespace app
 
         public async Task InvokeAsync(HttpContext context)
         {
+            Activity.Current?.SetBaggage("session.id", context.Session.Id);
             EnsureExpiry(context);
             if (DateTimeOffset.TryParse(context.Session.GetString("SessionSlidingExpiry"), out var expiry))
             {
                 if (Logger.IsEnabled(LogLevel.Debug)) Logger.LogDebug($"Got expiry of {expiry}");
+                Activity.Current?.SetTag("session.expiry", expiry.ToString("o"));
                 if (DateTimeOffset.Now > expiry) ExtendExpiry(context);
             }
             await Next(context);
@@ -40,6 +43,7 @@ namespace app
                 var expiry = DateTimeOffset.UtcNow.Add(IdleTimeout / 2);
                 context.Session.SetString("SessionSlidingExpiry", expiry.ToString("o"));
                 if (Logger.IsEnabled(LogLevel.Debug)) Logger.LogDebug($"Set expiry to {expiry}");
+                Activity.Current?.SetTag("session.expiry", expiry.ToString("o"));
             }
         }
 
@@ -55,6 +59,7 @@ namespace app
             context.Response.Cookies.Append(CookieBuilder.Name, value, cookieOptions);
             context.Session.SetString("SessionSlidingExpiry", expiry.ToString("o"));
             if (Logger.IsEnabled(LogLevel.Debug)) Logger.LogDebug($"Extended expiry to {expiry}");
+            Activity.Current?.SetTag("session.expiry_new", expiry.ToString("o"));
         }
     }
 
