@@ -18,8 +18,8 @@ namespace app.Services
 
     public class CosmosDistributedCacheOptions
     {
-        public string StorageDatabase { get; set; } = "cache";
-        public string StorageContainer { get; set; } = "cache";
+        public string StorageDatabase { get; set; } = "Cache";
+        public string StorageContainer { get; set; } = "Cache";
     }
 
     public class CosmosDistributedCache : IDistributedCache
