@@ -96,6 +96,7 @@ function messageKeyDown(event) {
   ].join("");
   switch (key) {
     case "Insert":
+    case "KeyF":
       if (!currentMessage) return;
       if (!completed) {
         setMessageStatus(currentMessage, "flagged", !flagged);
@@ -103,6 +104,7 @@ function messageKeyDown(event) {
       event.preventDefault();
       break;
     case "Control+Insert":
+    case "KeyC":
       if (!currentMessage) return;
       if (flagged) {
         setMessageStatus(currentMessage, "completed", true);
@@ -112,6 +114,7 @@ function messageKeyDown(event) {
       event.preventDefault();
       break;
     case "Pause":
+    case "KeyR":
       messageIsReading = !messageIsReading;
       if (messageIsReading) {
         messageAutoScroll();
