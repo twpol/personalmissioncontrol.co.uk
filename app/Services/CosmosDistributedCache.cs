@@ -61,7 +61,14 @@ namespace app.Services
 
         public async Task RefreshAsync(string key, CancellationToken token = default)
         {
-            await Do($"Refresh({key})", () => Container.PatchItemAsync<CacheEntry>(key, new PartitionKey(key), new[] { PatchOperation.Set("/patch", 0) }));
+            try
+            {
+                await Do($"Refresh({key})", () => Container.PatchItemAsync<CacheEntry>(key, new PartitionKey(key), new[] { PatchOperation.Set("/patch", 0) }));
+            }
+            catch (CosmosException error) when (error.StatusCode == System.Net.HttpStatusCode.NotFound)
+            {
+                // Ignore
+            }
         }
 
         public void Remove(string key) => RemoveAsync(key).Wait();
