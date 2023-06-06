@@ -5,6 +5,7 @@
     <UserSecretsId>6a3d64fc-1610-4cc1-b4bd-433ce43a2b86</UserSecretsId>
   </PropertyGroup>
   <ItemGroup>
+    <PackageReference Include="Markdig" Version="0.31.0" />
     <PackageReference Include="Microsoft.ApplicationInsights.AspNetCore" Version="2.21.0" />
     <PackageReference Include="Microsoft.AspNetCore.Authentication.MicrosoftAccount" Version="5.0.12" />
     <PackageReference Include="Microsoft.Azure.Cosmos" Version="3.31.0" />
