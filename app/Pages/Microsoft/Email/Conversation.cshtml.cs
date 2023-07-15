@@ -1,8 +1,12 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Net;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using app.Auth;
+using Microsoft.AspNetCore.WebUtilities;
+using Microsoft.Extensions.Primitives;
 using Microsoft.Graph;
 
 namespace app.Pages.Microsoft.Email
@@ -30,6 +34,9 @@ namespace app.Pages.Microsoft.Email
 
         public IEnumerable<DisplayMessage> Messages = null!;
         public string ConversationName = null!;
+
+        static readonly Regex HttpLink = new(@"https?://[^\r\n> ]+");
+        const string OutlookProtection = ".safelinks.protection.outlook.com";
 
         GraphServiceClient Graph;
 
@@ -106,7 +113,17 @@ namespace app.Pages.Microsoft.Email
             if (body.ContentType == BodyType.Text)
             {
                 return "<body class=pmc-plain-text><pre>"
-                    + body.Content.Replace("&", "&amp;").Replace("<", "&lt;").Replace(">", "&gt;")
+                    + HttpLink.Replace(WebUtility.HtmlEncode(body.Content), match =>
+                    {
+                        var uri = new Uri(WebUtility.HtmlDecode(match.Value));
+                        if (uri.Host.EndsWith(OutlookProtection))
+                        {
+                            var query = QueryHelpers.ParseQuery(uri.Query);
+                            var original = query.GetValueOrDefault("url", query.GetValueOrDefault("amp;url", StringValues.Empty)).FirstOrDefault();
+                            if (original != null) return $"<a href=\"{match.Value}\">{WebUtility.HtmlEncode(original)}</a>";
+                        }
+                        return $"<a href=\"{match.Value}\">{match.Value}</a>";
+                    })
                     + "</pre></body>";
             }
             return body.Content;
