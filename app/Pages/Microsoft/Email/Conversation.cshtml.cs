@@ -55,7 +55,7 @@ namespace app.Pages.Microsoft.Email
                     message.Subject,
                 })
                 .GetAsync();
-            ConversationName = CleanSubject(message.First().Subject);
+            ConversationName = CleanSubject(message.First().Subject ?? "(no subject)");
 
             Messages = (await GetAllPages(Graph.Me.Messages.Request()
                 .Filter($"conversationId eq '{conversation}'")

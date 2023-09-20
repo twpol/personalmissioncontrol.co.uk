@@ -36,7 +36,7 @@ namespace app.Pages.Microsoft.Email
                 .GroupBy(message => message.ConversationId)
                 .Select(group => new DisplayConversation(
                     group.Key,
-                    CleanSubject(group.First().Subject),
+                    CleanSubject(group.First().Subject ?? "(no subject)"),
                     group.Max(message => message.SentDateTime) ?? DateTimeOffset.MinValue,
                     group.Any(message => message.IsRead == false),
                     group.Any(message => message.Flag.FlagStatus == FollowupFlagStatus.Flagged),
