@@ -15,13 +15,13 @@ namespace app.Pages
         public IEnumerable<TaskModel> Tasks = null!;
         public IEnumerable<HabitModel> Habits = null!;
 
-        readonly ILogger<IndexModel> _logger;
+        readonly ILogger<IndexModel> Logger;
         readonly ExistData Exist;
         readonly MicrosoftData Microsoft;
 
         public IndexModel(ILogger<IndexModel> logger, ExistData exist, MicrosoftData microsoft)
         {
-            _logger = logger;
+            Logger = logger;
             Exist = exist;
             Microsoft = microsoft;
         }

@@ -12,7 +12,7 @@ namespace app.Pages.Microsoft.Email
         public MailFolder Folder = null!;
         public IEnumerable<DisplayConversation> Conversations = null!;
 
-        GraphServiceClient Graph;
+        readonly GraphServiceClient Graph;
 
         public FolderModel(MicrosoftGraphProvider graphProvider)
         {
@@ -46,7 +46,7 @@ namespace app.Pages.Microsoft.Email
                 .Reverse();
         }
 
-        async Task<IList<Message>> GetAllPages(IMailFolderMessagesCollectionRequest request)
+        static async Task<IList<Message>> GetAllPages(IMailFolderMessagesCollectionRequest request)
         {
             var list = new List<Message>();
             do
@@ -58,16 +58,16 @@ namespace app.Pages.Microsoft.Email
             return list;
         }
 
-        string CleanSubject(string subject)
+        static string CleanSubject(string subject)
         {
-            var length = 0;
+            int length;
             do
             {
                 length = subject.Length;
                 subject = subject.Trim();
-                if (subject.StartsWith("re:", StringComparison.OrdinalIgnoreCase)) subject = subject.Substring(3);
-                if (subject.StartsWith("fw:", StringComparison.OrdinalIgnoreCase)) subject = subject.Substring(3);
-                if (subject.StartsWith("fwd:", StringComparison.OrdinalIgnoreCase)) subject = subject.Substring(4);
+                if (subject.StartsWith("re:", StringComparison.OrdinalIgnoreCase)) subject = subject[3..];
+                if (subject.StartsWith("fw:", StringComparison.OrdinalIgnoreCase)) subject = subject[3..];
+                if (subject.StartsWith("fwd:", StringComparison.OrdinalIgnoreCase)) subject = subject[4..];
             } while (length != subject.Length);
             return subject;
         }
@@ -78,7 +78,7 @@ namespace app.Pages.Microsoft.Email
             {
                 get
                 {
-                    return $"{(Unread ? 1 : 0)} {(Flagged ? 1 : 0)} {Date.ToString("u")}";
+                    return $"{(Unread ? 1 : 0)} {(Flagged ? 1 : 0)} {Date:u}";
                 }
             }
         }

@@ -65,11 +65,17 @@ namespace app
 
             services.AddSingleton(typeof(IModelCache<>), typeof(ModelMemoryCache<>));
 
-            services.AddDistributedCosmosCache(options =>
+            services.AddCosmosStorage(options =>
             {
                 options.StorageEndpoint = Configuration["Storage:Cosmos:Endpoint"];
                 options.StorageKey = Configuration["Storage:Cosmos:Key"];
             });
+            services.AddCosmosModelStore(options =>
+            {
+                options.StorageTTL = TimeSpan.FromDays(28);
+                options.UpdateTTL = TimeSpan.FromHours(1);
+            });
+            services.AddDistributedCosmosCache();
 
             services.AddSession(options =>
             {

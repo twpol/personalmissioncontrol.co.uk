@@ -38,7 +38,7 @@ namespace app.Pages.Microsoft.Email
         static readonly Regex HttpLink = new(@"https?://[^\r\n> ]+");
         const string OutlookProtection = ".safelinks.protection.outlook.com";
 
-        GraphServiceClient Graph;
+        readonly GraphServiceClient Graph;
 
         public ConversationModel(MicrosoftGraphProvider graphProvider)
         {
@@ -82,7 +82,7 @@ namespace app.Pages.Microsoft.Email
                 ));
         }
 
-        async Task<IList<Message>> GetAllPages(IUserMessagesCollectionRequest request)
+        static async Task<IList<Message>> GetAllPages(IUserMessagesCollectionRequest request)
         {
             var list = new List<Message>();
             do
@@ -94,21 +94,21 @@ namespace app.Pages.Microsoft.Email
             return list;
         }
 
-        string CleanSubject(string subject)
+        static string CleanSubject(string subject)
         {
-            var length = 0;
+            int length;
             do
             {
                 length = subject.Length;
                 subject = subject.Trim();
-                if (subject.StartsWith("re:", StringComparison.OrdinalIgnoreCase)) subject = subject.Substring(3);
-                if (subject.StartsWith("fw:", StringComparison.OrdinalIgnoreCase)) subject = subject.Substring(3);
-                if (subject.StartsWith("fwd:", StringComparison.OrdinalIgnoreCase)) subject = subject.Substring(4);
+                if (subject.StartsWith("re:", StringComparison.OrdinalIgnoreCase)) subject = subject[3..];
+                if (subject.StartsWith("fw:", StringComparison.OrdinalIgnoreCase)) subject = subject[3..];
+                if (subject.StartsWith("fwd:", StringComparison.OrdinalIgnoreCase)) subject = subject[4..];
             } while (length != subject.Length);
             return subject;
         }
 
-        string GetHtmlBody(ItemBody body)
+        static string GetHtmlBody(ItemBody body)
         {
             if (body.ContentType == BodyType.Text)
             {

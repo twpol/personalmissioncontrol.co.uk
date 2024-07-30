@@ -12,7 +12,7 @@ namespace app.Pages.Microsoft.Tasks
     {
         public IEnumerable<DisplayWeek> Weeks = null!;
 
-        GraphServiceClient Graph;
+        readonly GraphServiceClient Graph;
 
         public StatsModel(MicrosoftGraphProvider graphProvider)
         {

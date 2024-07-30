@@ -9,7 +9,7 @@ namespace app.Pages.Microsoft.Email
     {
         public IEnumerable<DisplayFolder> Folders = null!;
 
-        GraphServiceClient Graph;
+        readonly GraphServiceClient Graph;
 
         public IndexModel(MicrosoftGraphProvider graphProvider)
         {
@@ -33,7 +33,7 @@ namespace app.Pages.Microsoft.Email
 
         async Task<IEnumerable<DisplayFolder>> GetMailFolders(MailFolder folder)
         {
-            if (folder.ChildFolderCount == 0) return new DisplayFolder[0];
+            if (folder.ChildFolderCount == 0) return System.Array.Empty<DisplayFolder>();
             return await GetMailFolders(await Graph.Me.MailFolders[folder.Id].ChildFolders.Request().GetAsync());
         }
 
