@@ -1,3 +1,4 @@
+using System.Diagnostics.CodeAnalysis;
 using System.Net.Http;
 using System.Net.Http.Headers;
 using Microsoft.AspNetCore.Authentication;
@@ -14,20 +15,20 @@ namespace app.Auth
             AuthenticationContext = authenticationContext;
         }
 
-        public HttpClient? GetChannel(string scheme)
+        public bool TryGet(string scheme, [NotNullWhen(true)] out HttpClient? client, out string accountId)
         {
-            if (AuthenticationContext.TryGetAuthentication(scheme, out var auth))
-            {
-                var type = auth.GetTokenValue("token_type");
-                var token = auth.GetTokenValue("access_token");
-                if (type != null && token != null)
-                {
-                    var client = new HttpClient();
-                    client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue(type, token);
-                    return client;
-                }
-            }
-            return null;
+            client = null;
+            accountId = "";
+            if (!AuthenticationContext.TryGetAuthentication(scheme, out var auth)) return false;
+
+            var type = auth.GetTokenValue("token_type");
+            var token = auth.GetTokenValue("access_token");
+            if (type == null || token == null) return false;
+
+            client = new HttpClient();
+            client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue(type, token);
+            accountId = auth.GetAccountId() ?? "";
+            return true;
         }
     }
 }

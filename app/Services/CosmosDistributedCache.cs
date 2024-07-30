@@ -27,7 +27,7 @@ namespace app.Services
         readonly ILogger<CosmosDistributedCache> Logger;
         readonly Container Container;
 
-        public CosmosDistributedCache(ICosmosStorage storage, IOptions<CosmosDistributedCacheOptions> options, ILogger<CosmosDistributedCache> logger, IOptions<SessionOptions> sessionOptions)
+        public CosmosDistributedCache(ILogger<CosmosDistributedCache> logger, IOptions<CosmosDistributedCacheOptions> options, ICosmosStorage storage, IOptions<SessionOptions> sessionOptions)
         {
             Logger = logger;
             Container = storage.GetContainerAsync(options.Value.StorageDatabase, options.Value.StorageContainer, (int)sessionOptions.Value.IdleTimeout.TotalSeconds).Result;

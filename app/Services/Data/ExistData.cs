@@ -20,36 +20,32 @@ namespace app.Services.Data
 
         readonly ILogger<ExistData> Logger;
         readonly HttpClient? Channel;
-        readonly IModelCache<IList<HabitModel>> HabitCache;
+        readonly string AccountId;
+        readonly IModelStore<HabitModel> Habits;
 
-        public ExistData(ILogger<ExistData> logger, OAuthProvider provider, IModelCache<IList<HabitModel>> habitCache)
+        public ExistData(ILogger<ExistData> logger, OAuthProvider provider, IModelStore<HabitModel> habits)
         {
             Logger = logger;
-            Channel = provider.GetChannel("Exist");
-            HabitCache = habitCache;
+            provider.TryGet("Exist", out Channel, out AccountId);
+            Habits = habits;
         }
 
         public async Task<IList<HabitModel>> GetHabits()
         {
-            if (Channel == null) return Array.Empty<HabitModel>();
-            return await GetOrCreateAsync<IList<HabitModel>>(HabitCache, "habits", async () =>
+            if (Logger.IsEnabled(LogLevel.Debug)) Logger.LogDebug($"GetHabits({AccountId})");
+            await Habits.UpdateCollectionAsync(AccountId, UpdateHabits);
+            return await Habits.GetCollectionAsync(AccountId).ToListAsync();
+        }
+
+        async IAsyncEnumerable<HabitModel> UpdateHabits()
+        {
+            if (Logger.IsEnabled(LogLevel.Debug)) Logger.LogDebug($"UpdateHabits({AccountId})");
+            if (Channel == null) yield break;
+            var tags = await ExecutePages<ApiTag>("https://exist.io/api/2/attributes/?groups=custom&limit=100");
+            foreach (var tag in tags.Select(tag => FromApi(tag)).Where(tag => tag != null).Cast<HabitModel>())
             {
-                var tags = await ExecutePages<ApiTag>("https://exist.io/api/2/attributes/?groups=custom&limit=100");
-                return tags.Select(tag => FromApi(tag)).Where(tag => tag != null).Cast<HabitModel>().OrderBy(tag => tag.Title).ToList();
-            });
-        }
-
-        async Task<T> GetOrCreateAsync<T>(IModelCache<T> cache, string subKey, Func<Task<T>> asyncFactory) where T : class
-        {
-            var key = $"{nameof(ExistData)}:{subKey}";
-            return (await cache.GetAsync(key)) ?? (await SetAsync(cache, key, asyncFactory));
-        }
-
-        static async Task<T> SetAsync<T>(IModelCache<T> cache, string key, Func<Task<T>> asyncFactory) where T : class
-        {
-            var obj = await asyncFactory();
-            await cache.SetAsync(key, obj);
-            return obj;
+                yield return tag;
+            }
         }
 
         async Task<IList<T>> ExecutePages<T>(string initialEndpoint)
@@ -76,11 +72,11 @@ namespace app.Services.Data
             return data;
         }
 
-        static HabitModel? FromApi(ApiTag tag)
+        HabitModel? FromApi(ApiTag tag)
         {
             var match = HabitPrefix.Match(tag.label);
             if (!match.Success) return null;
-            return new HabitModel(tag.name, TextInfo.ToTitleCase(match.Groups["name"].Value));
+            return new HabitModel(AccountId, "", tag.name, TextInfo.ToTitleCase(match.Groups["name"].Value));
         }
 
         record ApiPages<T>(int count, string? next, string? previous, T[] results);
