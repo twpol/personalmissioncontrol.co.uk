@@ -8,6 +8,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using app.Models;
+using System.Diagnostics;
 
 namespace app.Services
 {
@@ -51,17 +52,24 @@ namespace app.Services
 
         public async IAsyncEnumerable<T> GetCollectionAsync(string accountId)
         {
+            var startTime = Logger.IsEnabled(LogLevel.Debug) ? Stopwatch.GetTimestamp() : 0;
             if (Logger.IsEnabled(LogLevel.Debug)) Logger.LogDebug($"<{typeof(T).Name}> GetCollectionAsync({accountId})");
+
             await foreach (var item in Container.GetItemsAsync<T>(model => model.AccountId == accountId && model.ItemId != ""))
             {
                 if (Logger.IsEnabled(LogLevel.Debug)) Logger.LogDebug($"<{typeof(T).Name}> GetCollectionAsync({accountId}) <{item.Id}> Get");
                 yield return item;
             }
+
+            var stopTime = Logger.IsEnabled(LogLevel.Debug) ? Stopwatch.GetTimestamp() : 0;
+            if (Logger.IsEnabled(LogLevel.Debug)) Logger.LogDebug($"<{typeof(T).Name}> GetCollectionAsync({accountId}) {(float)(stopTime - startTime) / Stopwatch.Frequency:F3} s");
         }
 
         public async Task UpdateCollectionAsync(string accountId, Func<IAsyncEnumerable<T>> updater)
         {
             if (UpdateTTL == null) return;
+
+            var startTime = Logger.IsEnabled(LogLevel.Debug) ? Stopwatch.GetTimestamp() : 0;
             var containerId = $"{accountId}~~";
             var container = await GetContainer(containerId);
             var update = container == null || container.Change.Add(UpdateTTL.Value) < DateTimeOffset.Now;
@@ -85,6 +93,9 @@ namespace app.Services
 
             if (Logger.IsEnabled(LogLevel.Debug)) Logger.LogDebug($"<{typeof(T).Name}> UpdateCollectionAsync({accountId}) <{container.Id}> Upsert");
             await Container.UpsertItemAsync(container, new PartitionKey(container.Id));
+
+            var stopTime = Logger.IsEnabled(LogLevel.Debug) ? Stopwatch.GetTimestamp() : 0;
+            if (Logger.IsEnabled(LogLevel.Debug)) Logger.LogDebug($"<{typeof(T).Name}> UpdateCollectionAsync({accountId}) {(float)(stopTime - startTime) / Stopwatch.Frequency:F3} s");
         }
 
         async Task<CollectionModel?> GetContainer(string containerId)
