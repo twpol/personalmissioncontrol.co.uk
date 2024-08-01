@@ -9,11 +9,22 @@ using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using app.Auth;
 using app.Models;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 
 namespace app.Services.Data
 {
-    public class ExistData
+    public static class ExistDataExtensions
+    {
+        public static IServiceCollection AddExistData(this IServiceCollection services)
+        {
+            services.AddScoped<ExistData>();
+            services.AddScoped<IHabitProvider, ExistData>(s => s.GetRequiredService<ExistData>());
+            return services;
+        }
+    }
+
+    public class ExistData : IHabitProvider
     {
         static readonly Regex HabitPrefix = new("^(?:[a-z0-9] )?habit (?<flags>(?:[0-9]+p[0-9]+|[0-9]+r|d[0-9-]+) )+(?<name>.*)$");
         static readonly TextInfo TextInfo = new CultureInfo("en-GB").TextInfo;
@@ -28,13 +39,17 @@ namespace app.Services.Data
             Logger = logger;
             provider.TryGet("Exist", out Channel, out AccountId);
             Habits = habits;
+            if (Logger.IsEnabled(LogLevel.Debug)) Logger.LogDebug($".ctor({AccountId})");
         }
 
-        public async Task<IList<HabitModel>> GetHabits()
+        public async IAsyncEnumerable<HabitModel> GetHabits()
         {
             if (Logger.IsEnabled(LogLevel.Debug)) Logger.LogDebug($"GetHabits({AccountId})");
             await Habits.UpdateCollectionAsync(AccountId, UpdateHabits);
-            return await Habits.GetCollectionAsync(AccountId).ToListAsync();
+            await foreach (var habit in Habits.GetCollectionAsync(AccountId))
+            {
+                yield return habit;
+            }
         }
 
         async IAsyncEnumerable<HabitModel> UpdateHabits()

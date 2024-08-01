@@ -128,7 +128,7 @@ namespace app
             services.AddScoped<OAuthProvider>();
             services.AddScoped<MicrosoftGraphProvider>();
 
-            services.AddScoped<ExistData>();
+            services.AddExistData();
             services.AddScoped<MicrosoftData>();
 
             services.AddControllers();
