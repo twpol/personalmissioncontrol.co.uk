@@ -45,11 +45,12 @@ namespace app.Services.Data
         public async IAsyncEnumerable<HabitModel> GetHabits()
         {
             if (Logger.IsEnabled(LogLevel.Debug)) Logger.LogDebug($"GetHabits({AccountId})");
-            await Habits.UpdateCollectionAsync(AccountId, UpdateHabits);
             await foreach (var habit in Habits.GetCollectionAsync(AccountId))
             {
                 yield return habit;
             }
+            // Do update in the background
+            _ = Habits.UpdateCollectionAsync(AccountId, UpdateHabits);
         }
 
         async IAsyncEnumerable<HabitModel> UpdateHabits()

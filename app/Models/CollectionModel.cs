@@ -1,6 +1,4 @@
-using System;
-
 namespace app.Models
 {
-    public record CollectionModel(string AccountId, string ParentId, DateTimeOffset Change) : BaseModel(AccountId, ParentId, "");
+    public record CollectionModel(string AccountId, string ParentId, string Change) : BaseModel(AccountId, ParentId, "");
 }
