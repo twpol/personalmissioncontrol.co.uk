@@ -70,14 +70,33 @@ namespace app.Services
             if (UpdateTTL == null) return;
 
             var startTime = Logger.IsEnabled(LogLevel.Debug) ? Stopwatch.GetTimestamp() : 0;
-            var containerId = $"{accountId}~~";
-            var container = await GetContainer(containerId);
-            var update = container == null || container.Change.Add(UpdateTTL.Value) < DateTimeOffset.Now;
-            if (Logger.IsEnabled(LogLevel.Debug)) Logger.LogDebug($"<{typeof(T).Name}> UpdateCollectionAsync({accountId}) Change = {container?.Change}, Update = {update}");
-            if (!update) return;
+            if (Logger.IsEnabled(LogLevel.Debug)) Logger.LogDebug($"<{typeof(T).Name}> UpdateCollectionAsync({accountId})");
 
-            // Capture date/time before updater starts, to ensure overlap of time periods
-            container = new CollectionModel(accountId, "", DateTimeOffset.Now);
+            var containerId = $"{accountId}~~";
+            CollectionModel? container;
+            do
+            {
+                container = await GetContainer(containerId);
+                var update = container == null || DateTimeOffset.Parse(container.Change).Add(UpdateTTL.Value) < DateTimeOffset.UtcNow;
+                if (Logger.IsEnabled(LogLevel.Debug)) Logger.LogDebug($"<{typeof(T).Name}> UpdateCollectionAsync({accountId}) Change = {container?.Change}, Update = {update}");
+                if (!update) return;
+
+                if (container == null)
+                {
+                    container = new CollectionModel(accountId, "", "");
+                    container = await Container.UpsertItemAsync(container, new PartitionKey(container.Id));
+                }
+
+                try
+                {
+                    // Capture date/time before updater starts, to ensure overlap of time periods
+                    container = await Container.PatchItemAsync<CollectionModel>(container.Id, new PartitionKey(container.Id), new[] { PatchOperation.Set("/Change", DateTimeOffset.Now.ToRfc3339(DateTimeKind.Utc)) }, new PatchItemRequestOptions { FilterPredicate = $"FROM c WHERE c.Change = '{container.Change}'" });
+                }
+                catch (CosmosException error) when (error.StatusCode == System.Net.HttpStatusCode.PreconditionFailed)
+                {
+                    continue;
+                }
+            } while (false);
 
             await foreach (var item in updater())
             {
@@ -90,9 +109,6 @@ namespace app.Services
                 if (Logger.IsEnabled(LogLevel.Debug)) Logger.LogDebug($"<{typeof(T).Name}> UpdateCollectionAsync({accountId}) <{item.Id}> Delete");
                 await Container.DeleteItemAsync<T>(item.Id, new PartitionKey(item.Id));
             }
-
-            if (Logger.IsEnabled(LogLevel.Debug)) Logger.LogDebug($"<{typeof(T).Name}> UpdateCollectionAsync({accountId}) <{container.Id}> Upsert");
-            await Container.UpsertItemAsync(container, new PartitionKey(container.Id));
 
             var stopTime = Logger.IsEnabled(LogLevel.Debug) ? Stopwatch.GetTimestamp() : 0;
             if (Logger.IsEnabled(LogLevel.Debug)) Logger.LogDebug($"<{typeof(T).Name}> UpdateCollectionAsync({accountId}) {(float)(stopTime - startTime) / Stopwatch.Frequency:F3} s");
