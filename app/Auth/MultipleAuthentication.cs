@@ -72,7 +72,6 @@ namespace app.Auth
             if (accountId == null || properties == null) return Task.CompletedTask;
 
             properties.SetAccountId(accountId);
-            if (Logger.IsEnabled(LogLevel.Debug)) Logger.LogDebug($"HandleSignInAsync({accountId})");
             Activity.Current?.AddEvent(new("HandleSignInAsync", tags: new()
             {
                 { "auth.account_id", accountId },
@@ -92,7 +91,6 @@ namespace app.Auth
             var accountId = properties?.GetAccountId();
             if (accountId == null) return Task.CompletedTask;
 
-            if (Logger.IsEnabled(LogLevel.Debug)) Logger.LogDebug($"HandleSignOutAsync({accountId})");
             Activity.Current?.AddEvent(new("HandleSignOutAsync", tags: new()
             {
                 { "auth.account_id", accountId },
