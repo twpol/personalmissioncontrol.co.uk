@@ -68,6 +68,7 @@ namespace app.Auth
 
         protected override Task HandleSignInAsync(ClaimsPrincipal user, AuthenticationProperties? properties)
         {
+            Debug.Assert(user.Identities.Count() == 1, "Cannot HandleSignInAsync with more than one identity in user principal");
             var accountId = (user.Identity as ClaimsIdentity)?.GetAccountId();
             if (accountId == null || properties == null) return Task.CompletedTask;
 
@@ -202,9 +203,10 @@ namespace app.Auth
             if (json == null) return false;
 
             value = new AuthenticationProperties(json.Items);
+            var accountId = value.GetAccountId();
             var expiresAt = value.GetTokenValue("expires_at");
             var refreshToken = value.GetTokenValue("refresh_token");
-            activity?.SetTag("auth.account_id", value.GetAccountId());
+            activity?.SetTag("auth.account_id", accountId);
             activity?.SetTag("auth.expires_at", expiresAt);
             activity?.SetTag("auth.refresh_token_exists", refreshToken != null);
             if (expiresAt == null || refreshToken == null || (DateTimeOffset.Parse(expiresAt) - DateTimeOffset.Now).TotalMinutes > 5)
@@ -241,9 +243,10 @@ namespace app.Auth
                         activity?.SetTag("auth.expires_at_new", value.GetTokenValue("expires_at"));
                     }
                     var user = ContextAccessor.HttpContext.AuthenticateAsync().Result.Principal;
-                    if (user != null)
+                    var identity = user?.Identities.FirstOrDefault(id => id.GetAccountId() == accountId);
+                    if (identity != null)
                     {
-                        ContextAccessor.HttpContext.SignInAsync(user, value).Wait();
+                        ContextAccessor.HttpContext.SignInAsync(new ClaimsPrincipal(identity), value).Wait();
                         activity?.SetTag("auth.success", true);
                         return true;
                     }
