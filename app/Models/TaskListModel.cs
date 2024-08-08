@@ -1,4 +1,4 @@
-using System;
+using Newtonsoft.Json;
 
 namespace app.Models
 {
@@ -9,8 +9,9 @@ namespace app.Models
         Emails,
     }
 
-    public record TaskListModel(string Id, string Emoji, string Name, TaskListSpecial Special)
+    public record TaskListModel(string AccountId, string ParentId, string ItemId, string Emoji, string Name, TaskListSpecial Special) : BaseModel(AccountId, ParentId, ItemId)
     {
+        [JsonIgnore]
         public string SortKey
         {
             get

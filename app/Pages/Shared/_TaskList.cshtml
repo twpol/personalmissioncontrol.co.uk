@@ -3,15 +3,15 @@
 @if (Model.Emoji.Length > 0)
 {
     <li class="emoji-list-item">
-        <a asp-page="/Microsoft/Tasks/List" asp-route-list="@Model.Id"><span
+        <a asp-page="/Microsoft/Tasks/List" asp-route-list="@Model.ItemId"><span
             class="emoji-icon">@Model.Emoji</span>@Model.Name</a>
-        (<a asp-page="/Microsoft/Tasks/List" asp-page-handler="Tree" asp-route-list="@Model.Id">tree</a>)
+        (<a asp-page="/Microsoft/Tasks/List" asp-page-handler="Tree" asp-route-list="@Model.ItemId">tree</a>)
     </li>
 }
 else
 {
     <li>
-        <a asp-page="/Microsoft/Tasks/List" asp-route-list="@Model.Id">@Model.Name</a>
-        (<a asp-page="/Microsoft/Tasks/List" asp-page-handler="Tree" asp-route-list="@Model.Id">tree</a>)
+        <a asp-page="/Microsoft/Tasks/List" asp-route-list="@Model.ItemId">@Model.Name</a>
+        (<a asp-page="/Microsoft/Tasks/List" asp-page-handler="Tree" asp-route-list="@Model.ItemId">tree</a>)
     </li>
 }

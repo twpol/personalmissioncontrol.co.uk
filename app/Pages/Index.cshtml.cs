@@ -3,9 +3,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
-using Microsoft.Extensions.Logging;
 using app.Models;
-using app.Services.Data;
 using app.Services;
 
 namespace app.Pages
@@ -13,29 +11,22 @@ namespace app.Pages
     [ResponseCache(Duration = 1, Location = ResponseCacheLocation.Client)]
     public class IndexModel : PageModel
     {
-        public IEnumerable<TaskModel> Tasks = null!;
         public IEnumerable<HabitModel> Habits = null!;
+        public IEnumerable<TaskModel> Tasks = null!;
 
-        readonly ILogger<IndexModel> Logger;
         readonly IList<IHabitProvider> HabitProviders;
-        readonly MicrosoftData Microsoft;
+        readonly IList<ITaskProvider> TaskProviders;
 
-        public IndexModel(ILogger<IndexModel> logger, IEnumerable<IHabitProvider> habitProviders, MicrosoftData microsoft)
+        public IndexModel(IEnumerable<IHabitProvider> habitProviders, IEnumerable<ITaskProvider> taskProviders)
         {
-            Logger = logger;
             HabitProviders = habitProviders.ToList();
-            Microsoft = microsoft;
+            TaskProviders = taskProviders.ToList();
         }
 
         public async Task OnGet()
         {
             Habits = await HabitProviders.SelectManyAsync(data => data.GetHabits()).ToListAsync();
-            var tasks = new List<TaskModel>();
-            foreach (var list in await Microsoft.GetLists())
-            {
-                tasks.AddRange((await Microsoft.GetTasks(list.Id)).Where(task => task.IsImportant && !task.IsCompleted));
-            }
-            Tasks = tasks.OrderByDescending(task => task.Created);
+            Tasks = await TaskProviders.SelectManyAsync(data => data.GetTasks().Where(task => task.IsImportant && !task.IsCompleted)).ToListAsync();
         }
     }
 }

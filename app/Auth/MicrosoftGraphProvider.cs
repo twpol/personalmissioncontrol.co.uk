@@ -1,5 +1,6 @@
-using System;
+using System.Diagnostics.CodeAnalysis;
 using System.Net.Http;
+using System.Net.Http.Headers;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.MicrosoftAccount;
@@ -7,39 +8,46 @@ using Microsoft.Graph;
 
 namespace app.Auth
 {
-    public class MicrosoftGraphProvider : IAuthenticationProvider
+    public class MicrosoftGraphProvider
     {
-        public GraphServiceClient Client
-        {
-            get
-            {
-                if (MaybeClient == null) throw new InvalidOperationException("Microsoft Graph client not initialised");
-                return MaybeClient;
-            }
-        }
-
-        public GraphServiceClient? MaybeClient { get; init; }
-
-        readonly string? Authorization;
+        readonly MultipleAuthenticationContext<MicrosoftAccountOptions> AuthenticationContext;
 
         public MicrosoftGraphProvider(MultipleAuthenticationContext<MicrosoftAccountOptions> authenticationContext)
         {
-            if (authenticationContext.TryGetAuthentication("Microsoft", out var auth))
-            {
-                var type = auth.GetTokenValue("token_type");
-                var token = auth.GetTokenValue("access_token");
-                Authorization = $"{type} {token}";
-                MaybeClient = new GraphServiceClient(this);
-            }
+            AuthenticationContext = authenticationContext;
         }
 
-        public Task AuthenticateRequestAsync(HttpRequestMessage request)
+        public bool TryGet(string scheme, [NotNullWhen(true)] out GraphServiceClient? client, out string accountId)
         {
-            if (Authorization != null && !request.Headers.Contains("Authorization"))
+            client = null;
+            accountId = "";
+            if (!AuthenticationContext.TryGetAuthentication(scheme, out var auth)) return false;
+
+            var type = auth.GetTokenValue("token_type");
+            var token = auth.GetTokenValue("access_token");
+            if (type == null || token == null) return false;
+
+            client = new GraphServiceClient(new AuthenticationProvider(type, token));
+            accountId = auth.GetAccountId() ?? "";
+            return true;
+        }
+
+        class AuthenticationProvider : IAuthenticationProvider
+        {
+            readonly string Type;
+            readonly string Token;
+
+            public AuthenticationProvider(string type, string token)
             {
-                request.Headers.Add("Authorization", Authorization);
+                Type = type;
+                Token = token;
             }
-            return Task.CompletedTask;
+
+            public Task AuthenticateRequestAsync(HttpRequestMessage request)
+            {
+                request.Headers.Authorization = new AuthenticationHeaderValue(Type, Token);
+                return Task.CompletedTask;
+            }
         }
     }
 }
