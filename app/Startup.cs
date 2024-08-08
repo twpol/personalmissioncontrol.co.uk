@@ -129,7 +129,7 @@ namespace app
             services.AddScoped<MicrosoftGraphProvider>();
 
             services.AddExistData();
-            services.AddScoped<MicrosoftData>();
+            services.AddMicrosoftData();
 
             services.AddControllers();
 

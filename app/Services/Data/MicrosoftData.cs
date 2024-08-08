@@ -3,70 +3,121 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
 using System.Linq;
-using System.Threading.Tasks;
+using System.Text;
 using app.Auth;
 using app.Models;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using Microsoft.Graph;
 
 namespace app.Services.Data
 {
-    public class MicrosoftData
+    public static class MicrosoftDataExtensions
     {
-        readonly TimeSpan CacheTimeout = TimeSpan.FromSeconds(30);
+        public static IServiceCollection AddMicrosoftData(this IServiceCollection services)
+        {
+            services.AddScoped<MicrosoftData>();
+            services.AddScoped<ITaskProvider, MicrosoftData>(s => s.GetRequiredService<MicrosoftData>());
+            return services;
+        }
+    }
 
+    public class MicrosoftData : ITaskProvider
+    {
+        readonly ILogger<MicrosoftData> Logger;
         readonly GraphServiceClient? Graph;
-        readonly IModelCache<IList<TodoTaskList>> TaskListCache;
-        readonly IModelCache<IList<TaskModel>> TaskCache;
+        readonly string AccountId;
+        readonly IModelStore<TaskListModel> TaskLists;
+        readonly IModelStore<TaskModel> Tasks;
 
-        public MicrosoftData(MicrosoftGraphProvider graphProvider, IModelCache<IList<TodoTaskList>> taskListCache, IModelCache<IList<TaskModel>> taskCache)
+        public MicrosoftData(ILogger<MicrosoftData> logger, MicrosoftGraphProvider graphProvider, IModelStore<TaskListModel> taskLists, IModelStore<TaskModel> tasks)
         {
-            if (!graphProvider.TryGet("Microsoft", out Graph!, out _)) throw new InvalidOperationException("Microsoft Graph client not initialised");
-            TaskListCache = taskListCache;
-            TaskCache = taskCache;
+            Logger = logger;
+            graphProvider.TryGet("Microsoft", out Graph, out AccountId);
+            TaskLists = taskLists;
+            Tasks = tasks;
+            if (Logger.IsEnabled(LogLevel.Debug)) Logger.LogDebug($".ctor({AccountId})");
         }
 
-        public async Task<IList<TodoTaskList>> GetLists()
+        public async IAsyncEnumerable<TaskListModel> GetTaskLists()
         {
-            if (Graph == null) return Array.Empty<TodoTaskList>();
-            return await GetOrCreateAsync<IList<TodoTaskList>>(TaskListCache, "tasks:lists", async () =>
-                await Graph.Me.Todo.Lists.Request().Top(1000).GetAsync()
-            );
-        }
-
-        public async Task<IList<TaskModel>> GetTasks(string list)
-        {
-            if (Graph == null) return Array.Empty<TaskModel>();
-            return await GetOrCreateAsync<IList<TaskModel>>(TaskCache, $"tasks:list:{list}", async () =>
+            if (Logger.IsEnabled(LogLevel.Debug)) Logger.LogDebug($"GetTaskLists({AccountId})");
+            await foreach (var taskList in TaskLists.GetCollectionAsync(AccountId, ""))
             {
-                return (await GetAllPages(Graph.Me.Todo.Lists[list].Tasks.Request().Top(1000)))
-                    .Select(task => FromGraph(task))
-                    .OrderBy(task => task.SortKey).ToList();
-            });
+                yield return taskList;
+            }
+            // Do update in the background
+            _ = TaskLists.UpdateCollectionAsync(AccountId, "", UpdateTaskLists);
         }
 
-        async Task<T> GetOrCreateAsync<T>(IModelCache<T> cache, string subKey, Func<Task<T>> asyncFactory) where T : class
+        async IAsyncEnumerable<TaskListModel> UpdateTaskLists()
         {
-            var key = $"{nameof(MicrosoftData)}:{subKey}";
-            return (await cache.GetAsync(key)) ?? (await SetAsync(cache, key, asyncFactory));
-        }
-
-        static async Task<T> SetAsync<T>(IModelCache<T> cache, string key, Func<Task<T>> asyncFactory) where T : class
-        {
-            var obj = await asyncFactory();
-            await cache.SetAsync(key, obj);
-            return obj;
-        }
-
-        static async Task<IList<TodoTask>> GetAllPages(ITodoTaskListTasksCollectionRequest request)
-        {
-            var list = new List<TodoTask>();
-            do
+            if (Logger.IsEnabled(LogLevel.Debug)) Logger.LogDebug($"UpdateTaskLists({AccountId})");
+            if (Graph == null) yield break;
+            var lists = await Graph.Me.Todo.Lists.Request().Top(1000).GetAsync();
+            foreach (var list in lists.Select(list => FromApi(list)))
             {
-                var task = await request.GetAsync();
-                list.AddRange(task);
-                request = task.NextPageRequest;
-            } while (request != null);
-            return list;
+                yield return list;
+            }
+        }
+
+        TaskListModel FromApi(TodoTaskList list)
+        {
+            var (Emoji, Text) = GetSplitEmojiName(list.DisplayName);
+            return new TaskListModel(AccountId, "", list.Id, Emoji, Text, list.WellknownListName == WellknownListName.DefaultList ? TaskListSpecial.Default : list.WellknownListName == WellknownListName.FlaggedEmails ? TaskListSpecial.Emails : TaskListSpecial.None);
+        }
+
+        static (string Emoji, string Text) GetSplitEmojiName(string name)
+        {
+            var first = StringInfo.GetNextTextElement(name);
+            if (IsTextElementEmoji(first)) return (first, name[first.Length..].Trim());
+            return ("", name);
+        }
+
+        static bool IsTextElementEmoji(string text)
+        {
+            var runes = text.EnumerateRunes();
+            var unicode = runes.Select(rune => Rune.GetUnicodeCategory(rune));
+            return runes.Any(rune => rune.Value == 0xFE0F) || unicode.Any(category => category == UnicodeCategory.OtherSymbol);
+        }
+
+        public async IAsyncEnumerable<TaskModel> GetTasks()
+        {
+            if (Logger.IsEnabled(LogLevel.Debug)) Logger.LogDebug($"GetTasks({AccountId})");
+            if (Graph == null) yield break;
+            await foreach (var task in Tasks.GetCollectionAsync(AccountId, null))
+            {
+                yield return task;
+            }
+            // TODO: Do update in the background?
+        }
+
+        public async IAsyncEnumerable<TaskModel> GetTasks(string listId)
+        {
+            if (Logger.IsEnabled(LogLevel.Debug)) Logger.LogDebug($"GetTasks({AccountId}, {listId})");
+            if (Graph == null) yield break;
+            await foreach (var task in Tasks.GetCollectionAsync(AccountId, listId))
+            {
+                yield return task;
+            }
+            // Do update in the background
+            _ = Tasks.UpdateCollectionAsync(AccountId, listId, () => UpdateTasks(listId));
+        }
+
+        async IAsyncEnumerable<TaskModel> UpdateTasks(string listId)
+        {
+            if (Logger.IsEnabled(LogLevel.Debug)) Logger.LogDebug($"UpdateTasks({AccountId}, {listId})");
+            if (Graph == null) yield break;
+            var tasks = await Graph.Me.Todo.Lists[listId].Tasks.Request().Top(1000).GetAsync();
+            foreach (var task in tasks.Select(task => FromApi(listId, task)))
+            {
+                yield return task;
+            }
+        }
+
+        TaskModel FromApi(string listId, TodoTask task)
+        {
+            return new TaskModel(AccountId, listId, task.Id, task.Title, task.Importance == Importance.High, task.CreatedDateTime ?? DateTimeOffset.MinValue, task.Status == Microsoft.Graph.TaskStatus.Completed ? GetDTO(task.CompletedDateTime) : null);
         }
 
         static DateTimeOffset? GetDTO(DateTimeTimeZone dateTimeTimeZone)
@@ -77,11 +128,6 @@ namespace app.Services.Data
                 "UTC" => (DateTimeOffset?)DateTimeOffset.ParseExact(dateTimeTimeZone.DateTime + "Z", "o", CultureInfo.InvariantCulture),
                 _ => throw new InvalidDataException($"Unknown time zone: {dateTimeTimeZone.TimeZone}"),
             };
-        }
-
-        static TaskModel FromGraph(TodoTask task)
-        {
-            return new TaskModel(task.Id, task.Title, task.Importance == Importance.High, task.CreatedDateTime ?? DateTimeOffset.MinValue, task.Status == Microsoft.Graph.TaskStatus.Completed ? GetDTO(task.CompletedDateTime) : null);
         }
     }
 }

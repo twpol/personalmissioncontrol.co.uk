@@ -5,6 +5,7 @@ using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using app.Auth;
 using app.Models;
+using app.Services;
 using app.Services.Data;
 using Microsoft.Graph;
 
@@ -18,7 +19,7 @@ namespace app.Pages.Microsoft.Tasks
         public bool Nested;
 
         readonly GraphServiceClient Graph;
-        readonly MicrosoftData Data;
+        readonly ITaskProvider Data;
 
         public ListModel(MicrosoftGraphProvider graphProvider, MicrosoftData data)
         {
@@ -30,7 +31,7 @@ namespace app.Pages.Microsoft.Tasks
         {
             List = await Graph.Me.Todo.Lists[list].Request().GetAsync();
             Title = List.DisplayName;
-            Tasks = await Data.GetTasks(list);
+            Tasks = await Data.GetTasks(list).ToListAsync();
         }
 
         public async Task OnGetTree(string list)
@@ -44,11 +45,7 @@ namespace app.Pages.Microsoft.Tasks
             Title = text;
             Nested = HttpContext.Request.Query["layout"] == "nested";
 
-            var tasks = new List<TaskModel>();
-            foreach (var list in await Data.GetLists())
-            {
-                tasks.AddRange((await Data.GetTasks(list.Id)).Where(task => task.Title.Contains(text)));
-            }
+            var tasks = (await Data.GetTasks().ToListAsync()).Where(task => task.Title.Contains(Title));
             Tasks = tasks.OrderBy(task => task.SortKey);
         }
 
@@ -57,11 +54,7 @@ namespace app.Pages.Microsoft.Tasks
             Title = $"#{hashtag}";
             Nested = HttpContext.Request.Query["layout"] == "nested";
 
-            var tasks = new List<TaskModel>();
-            foreach (var list in await Data.GetLists())
-            {
-                tasks.AddRange((await Data.GetTasks(list.Id)).Where(task => task.Title.Contains(Title)));
-            }
+            var tasks = (await Data.GetTasks().ToListAsync()).Where(task => task.Title.Contains(Title));
             var pattern = new Regex($@". #{hashtag}(?: |$)");
             Tasks = tasks.Where(task => pattern.IsMatch(task.Title)).OrderBy(task => task.SortKey);
         }
