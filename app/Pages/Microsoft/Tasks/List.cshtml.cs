@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text.RegularExpressions;
@@ -21,7 +22,7 @@ namespace app.Pages.Microsoft.Tasks
 
         public ListModel(MicrosoftGraphProvider graphProvider, MicrosoftData data)
         {
-            Graph = graphProvider.Client;
+            if (!graphProvider.TryGet("Microsoft", out Graph!, out _)) throw new InvalidOperationException("Microsoft Graph client not initialised");
             Data = data;
         }
 

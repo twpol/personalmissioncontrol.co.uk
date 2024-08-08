@@ -18,9 +18,9 @@ namespace app.Services.Data
         readonly IModelCache<IList<TodoTaskList>> TaskListCache;
         readonly IModelCache<IList<TaskModel>> TaskCache;
 
-        public MicrosoftData(MicrosoftGraphProvider provider, IModelCache<IList<TodoTaskList>> taskListCache, IModelCache<IList<TaskModel>> taskCache)
+        public MicrosoftData(MicrosoftGraphProvider graphProvider, IModelCache<IList<TodoTaskList>> taskListCache, IModelCache<IList<TaskModel>> taskCache)
         {
-            Graph = provider.MaybeClient;
+            if (!graphProvider.TryGet("Microsoft", out Graph!, out _)) throw new InvalidOperationException("Microsoft Graph client not initialised");
             TaskListCache = taskListCache;
             TaskCache = taskCache;
         }

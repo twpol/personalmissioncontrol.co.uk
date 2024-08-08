@@ -1,5 +1,3 @@
-using System;
-using System.Linq;
 using System.Threading.Tasks;
 using app.Auth;
 using Microsoft.AspNetCore.Authorization;
@@ -17,7 +15,9 @@ namespace app.Controllers.Microsoft
         [HttpGet("status")]
         public async Task<IActionResult> Status(string id, [FromServices] MicrosoftGraphProvider graphProvider)
         {
-            var message = await graphProvider.Client.Me.Messages[id].Request()
+            if (!graphProvider.TryGet("Microsoft", out var client, out _)) return NotFound("Microsoft account not found");
+
+            var message = await client.Me.Messages[id].Request()
                 .Select(message => new
                 {
                     message.IsRead,
@@ -34,13 +34,15 @@ namespace app.Controllers.Microsoft
         [HttpPost("status")]
         public async Task<IActionResult> Status(string id, bool? unread, bool? flagged, bool? completed, [FromServices] MicrosoftGraphProvider graphProvider)
         {
+            if (!graphProvider.TryGet("Microsoft", out var client, out _)) return NotFound("Microsoft account not found");
+
             var message = new Message();
             if (unread.HasValue) message.IsRead = !unread.Value;
             if (flagged.HasValue || completed.HasValue) message.Flag = new FollowupFlag();
             if (flagged.HasValue) message.Flag.FlagStatus = flagged.Value ? FollowupFlagStatus.Flagged : FollowupFlagStatus.NotFlagged;
             if (completed.HasValue) message.Flag.FlagStatus = completed.Value ? FollowupFlagStatus.Complete : FollowupFlagStatus.Flagged;
 
-            await graphProvider.Client.Me.Messages[id].Request().UpdateAsync(message);
+            await client.Me.Messages[id].Request().UpdateAsync(message);
             return Ok();
         }
 

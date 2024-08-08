@@ -42,7 +42,7 @@ namespace app.Pages.Microsoft.Email
 
         public ConversationModel(MicrosoftGraphProvider graphProvider)
         {
-            Graph = graphProvider.Client;
+            if (!graphProvider.TryGet("Microsoft", out Graph!, out _)) throw new InvalidOperationException("Microsoft Graph client not initialised");
         }
 
         public async Task OnGet(string conversation)
