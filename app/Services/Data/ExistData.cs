@@ -50,12 +50,18 @@ namespace app.Services.Data
                 yield return habit;
             }
             // Do update in the background
-            _ = Habits.UpdateCollectionAsync(AccountId, "", UpdateHabits);
+            _ = UpdateHabits();
         }
 
-        async IAsyncEnumerable<HabitModel> UpdateHabits()
+        public async Task UpdateHabits()
         {
             if (Logger.IsEnabled(LogLevel.Debug)) Logger.LogDebug($"UpdateHabits({AccountId})");
+            await Habits.UpdateCollectionAsync(AccountId, "", UpdateCollectionHabits);
+        }
+
+        async IAsyncEnumerable<HabitModel> UpdateCollectionHabits()
+        {
+            if (Logger.IsEnabled(LogLevel.Debug)) Logger.LogDebug($"UpdateCollectionHabits({AccountId})");
             if (Channel == null) yield break;
             var tags = await ExecutePages<ApiTag>("https://exist.io/api/2/attributes/?groups=custom&limit=100");
             foreach (var tag in tags.Select(tag => FromApi(tag)).Where(tag => tag != null).Cast<HabitModel>())
