@@ -4,6 +4,7 @@ using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Text;
+using System.Threading.Tasks;
 using app.Auth;
 using app.Models;
 using Microsoft.Extensions.DependencyInjection;
@@ -47,17 +48,62 @@ namespace app.Services.Data
                 yield return taskList;
             }
             // Do update in the background
-            _ = TaskLists.UpdateCollectionAsync(AccountId, "", UpdateTaskLists);
+            _ = UpdateTasks();
         }
 
-        async IAsyncEnumerable<TaskListModel> UpdateTaskLists()
+        public async IAsyncEnumerable<TaskModel> GetTasks()
         {
-            if (Logger.IsEnabled(LogLevel.Debug)) Logger.LogDebug($"UpdateTaskLists({AccountId})");
+            if (Logger.IsEnabled(LogLevel.Debug)) Logger.LogDebug($"GetTasks({AccountId})");
+            if (Graph == null) yield break;
+            await foreach (var task in Tasks.GetCollectionAsync(AccountId, null))
+            {
+                yield return task;
+            }
+            // Do update in the background
+            _ = UpdateTasks();
+        }
+
+        public async IAsyncEnumerable<TaskModel> GetTasks(string listId)
+        {
+            if (Logger.IsEnabled(LogLevel.Debug)) Logger.LogDebug($"GetTasks({AccountId}, {listId})");
+            if (Graph == null) yield break;
+            await foreach (var task in Tasks.GetCollectionAsync(AccountId, listId))
+            {
+                yield return task;
+            }
+            // Do update in the background
+            _ = UpdateTasks();
+        }
+
+        public async Task UpdateTasks()
+        {
+            if (Logger.IsEnabled(LogLevel.Debug)) Logger.LogDebug($"UpdateTasks({AccountId})");
+            await TaskLists.UpdateCollectionAsync(AccountId, "", UpdateCollectionTaskLists);
+            await foreach (var taskList in TaskLists.GetCollectionAsync(AccountId, ""))
+            {
+                await Tasks.UpdateCollectionAsync(AccountId, taskList.ItemId, () => UpdateCollectionTasks(taskList.ItemId));
+            }
+        }
+
+        async IAsyncEnumerable<TaskListModel> UpdateCollectionTaskLists()
+        {
+            if (Logger.IsEnabled(LogLevel.Debug)) Logger.LogDebug($"UpdateCollectionTaskLists({AccountId})");
             if (Graph == null) yield break;
             var lists = await Graph.Me.Todo.Lists.Request().Top(1000).GetAsync();
             foreach (var list in lists.Select(list => FromApi(list)))
             {
                 yield return list;
+            }
+        }
+
+        async IAsyncEnumerable<TaskModel> UpdateCollectionTasks(string listId)
+        {
+            if (Logger.IsEnabled(LogLevel.Debug)) Logger.LogDebug($"UpdateCollectionTasks({AccountId}, {listId})");
+            if (Graph == null) yield break;
+            var tasks = await Graph.Me.Todo.Lists[listId].Tasks.Request().Top(1000).GetAsync();
+            foreach (var task in tasks.Select(task => FromApi(listId, task)))
+            {
+                yield return task;
             }
         }
 
@@ -79,40 +125,6 @@ namespace app.Services.Data
             var runes = text.EnumerateRunes();
             var unicode = runes.Select(rune => Rune.GetUnicodeCategory(rune));
             return runes.Any(rune => rune.Value == 0xFE0F) || unicode.Any(category => category == UnicodeCategory.OtherSymbol);
-        }
-
-        public async IAsyncEnumerable<TaskModel> GetTasks()
-        {
-            if (Logger.IsEnabled(LogLevel.Debug)) Logger.LogDebug($"GetTasks({AccountId})");
-            if (Graph == null) yield break;
-            await foreach (var task in Tasks.GetCollectionAsync(AccountId, null))
-            {
-                yield return task;
-            }
-            // TODO: Do update in the background?
-        }
-
-        public async IAsyncEnumerable<TaskModel> GetTasks(string listId)
-        {
-            if (Logger.IsEnabled(LogLevel.Debug)) Logger.LogDebug($"GetTasks({AccountId}, {listId})");
-            if (Graph == null) yield break;
-            await foreach (var task in Tasks.GetCollectionAsync(AccountId, listId))
-            {
-                yield return task;
-            }
-            // Do update in the background
-            _ = Tasks.UpdateCollectionAsync(AccountId, listId, () => UpdateTasks(listId));
-        }
-
-        async IAsyncEnumerable<TaskModel> UpdateTasks(string listId)
-        {
-            if (Logger.IsEnabled(LogLevel.Debug)) Logger.LogDebug($"UpdateTasks({AccountId}, {listId})");
-            if (Graph == null) yield break;
-            var tasks = await Graph.Me.Todo.Lists[listId].Tasks.Request().Top(1000).GetAsync();
-            foreach (var task in tasks.Select(task => FromApi(listId, task)))
-            {
-                yield return task;
-            }
         }
 
         TaskModel FromApi(string listId, TodoTask task)
