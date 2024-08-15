@@ -26,7 +26,7 @@ namespace app.Pages
         public async Task OnGet()
         {
             Habits = await HabitProviders.SelectManyAsync(data => data.GetHabits()).ToListAsync();
-            Tasks = await TaskProviders.SelectManyAsync(data => data.GetTasks().Where(task => task.IsImportant && !task.IsCompleted)).ToListAsync();
+            Tasks = (await TaskProviders.SelectManyAsync(data => data.GetTasks().Where(task => task.IsImportant && !task.IsCompleted)).ToListAsync()).OrderBy(task => task.Created).Reverse();
         }
     }
 }
