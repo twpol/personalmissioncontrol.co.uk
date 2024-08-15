@@ -88,7 +88,7 @@ namespace app.Services.Data
             if (Channel == null) throw new InvalidOperationException("Cannot execute without channel");
             var request = new HttpRequestMessage(HttpMethod.Get, endpoint);
             var response = await Channel.SendAsync(request, HttpCompletionOption.ResponseHeadersRead);
-            if (Logger.IsEnabled(LogLevel.Debug)) Logger.LogDebug("Execute({0}) = {1}", endpoint, response.StatusCode);
+            if (Logger.IsEnabled(LogLevel.Trace)) Logger.LogTrace("Execute({0}) = {1}", endpoint, response.StatusCode);
             response.EnsureSuccessStatusCode();
             var data = JsonSerializer.Deserialize<T>(response.Content.ReadAsStream()) ?? throw new InvalidDataException("Failed to parse response");
             return data;

@@ -57,7 +57,7 @@ namespace app.Services
 
             await foreach (var item in Container.GetItemsAsync<T>(model => model.AccountId == accountId && (parentId == null || model.ParentId == parentId) && model.ItemId != ""))
             {
-                if (Logger.IsEnabled(LogLevel.Debug)) Logger.LogDebug($"<{typeof(T).Name}> GetCollectionAsync({accountId}, {parentId ?? "(null)"}) <{item.Id}> Get");
+                if (Logger.IsEnabled(LogLevel.Trace)) Logger.LogTrace($"<{typeof(T).Name}> GetCollectionAsync({accountId}, {parentId ?? "(null)"}) <{item.Id}> Get");
                 yield return item;
             }
 
@@ -70,8 +70,6 @@ namespace app.Services
             if (UpdateTTL == null) return;
 
             var startTime = Logger.IsEnabled(LogLevel.Debug) ? Stopwatch.GetTimestamp() : 0;
-            if (Logger.IsEnabled(LogLevel.Debug)) Logger.LogDebug($"<{typeof(T).Name}> UpdateCollectionAsync({accountId}, {parentId ?? "(null)"})");
-
             var containerId = $"{accountId}~{parentId}~";
             CollectionModel? container;
             do
@@ -100,13 +98,13 @@ namespace app.Services
 
             await foreach (var item in updater())
             {
-                if (Logger.IsEnabled(LogLevel.Debug)) Logger.LogDebug($"<{typeof(T).Name}> UpdateCollectionAsync({accountId}, {parentId ?? "(null)"}) <{item.Id}> Upsert");
+                if (Logger.IsEnabled(LogLevel.Trace)) Logger.LogTrace($"<{typeof(T).Name}> UpdateCollectionAsync({accountId}, {parentId ?? "(null)"}) <{item.Id}> Upsert");
                 await Container.UpsertItemAsync(item, new PartitionKey(item.Id));
             }
 
             await foreach (var item in Container.GetItemsAsync<T>(model => model.AccountId == accountId && (parentId == null || model.ParentId == parentId) && model.ItemId != "" && model.TimeStamp < container.TimeStamp))
             {
-                if (Logger.IsEnabled(LogLevel.Debug)) Logger.LogDebug($"<{typeof(T).Name}> UpdateCollectionAsync({accountId}, {parentId ?? "(null)"}) <{item.Id}> Delete");
+                if (Logger.IsEnabled(LogLevel.Trace)) Logger.LogTrace($"<{typeof(T).Name}> UpdateCollectionAsync({accountId}, {parentId ?? "(null)"}) <{item.Id}> Delete");
                 await Container.DeleteItemAsync<T>(item.Id, new PartitionKey(item.Id));
             }
 
