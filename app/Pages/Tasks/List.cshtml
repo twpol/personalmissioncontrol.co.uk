@@ -1,15 +1,14 @@
 @page "{handler?}"
-@model app.Pages.Microsoft.Tasks.ListModel
+@model app.Pages.Tasks.ListModel
 @{
-    ViewData["Title"] = Model.Title + " - Tasks - Microsoft";
+    ViewData["Title"] = Model.Title + " - Tasks";
     ViewData["Heading"] = Model.Title;
 }
 
 @section Breadcrumb {
     <ol class="breadcrumb">
         <li class="breadcrumb-item"><a asp-area="" asp-page="/Index">Home</a></li>
-        <li class="breadcrumb-item"><a asp-area="" asp-page="/Microsoft/Index">Microsoft</a></li>
-        <li class="breadcrumb-item"><a asp-area="" asp-page="/Microsoft/Tasks/Index">Tasks</a></li>
+        <li class="breadcrumb-item"><a asp-area="" asp-page="/Tasks/Index">Tasks</a></li>
         <li class="breadcrumb-item active" aria-current="page">@Model.Title</li>
     </ol>
 }
