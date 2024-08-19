@@ -30,6 +30,6 @@ namespace app.Models
         public string? NestedTag => Title.StartsWith("#") ? Title.Split(' ')[0][1..] : null;
 
         [JsonIgnore]
-        public string NestedUrl => $"/Microsoft/Tasks/List/Children?hashtag={NestedTag}&layout=nested";
+        public string NestedUrl => $"/Tasks/List/Children?hashtag={NestedTag}&layout=nested";
     }
 }

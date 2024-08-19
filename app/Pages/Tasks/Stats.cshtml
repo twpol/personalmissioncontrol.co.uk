@@ -1,16 +1,15 @@
 @page
-@model app.Pages.Microsoft.Tasks.StatsModel
+@model app.Pages.Tasks.StatsModel
 @{
-    ViewData["Title"] = "Stats - Tasks - Microsoft";
-    ViewData["Heading"] = "Microsoft Tasks Stats";
+    ViewData["Title"] = "Stats - Tasks";
+    ViewData["Heading"] = "Stats";
 }
 
 @section Breadcrumb {
     <ol class="breadcrumb">
         <li class="breadcrumb-item"><a asp-area="" asp-page="/Index">Home</a></li>
-        <li class="breadcrumb-item"><a asp-area="" asp-page="/Microsoft/Index">Microsoft</a></li>
-        <li class="breadcrumb-item"><a asp-area="" asp-page="/Microsoft/Tasks/Index">Tasks</a></li>
-        <li class="breadcrumb-item active" aria-current="page">Tasks</li>
+        <li class="breadcrumb-item"><a asp-area="" asp-page="/Tasks/Index">Tasks</a></li>
+        <li class="breadcrumb-item active" aria-current="page">Stats</li>
     </ol>
 }
 
