@@ -24,7 +24,7 @@ namespace app.Pages.Tasks
             TaskProviders = taskProviders.ToList();
         }
 
-        public async Task<IActionResult> OnGet(string list)
+        public async Task<IActionResult> OnGetList(string list)
         {
             var matchingList = await TaskProviders.SelectManyAsync(provider => provider.GetTaskLists()).FirstOrDefaultAsync(taskList => taskList.Id == list);
             if (matchingList == null) return NotFound("List not found");
@@ -38,7 +38,7 @@ namespace app.Pages.Tasks
         public async Task OnGetTree(string list)
         {
             Nested = true;
-            await OnGet(list);
+            await OnGetList(list);
         }
 
         public async Task OnGetSearch(string text)
