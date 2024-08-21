@@ -19,6 +19,12 @@
     }
 </ul>
 
+<h2>Search</h2>
+<form asp-page="/Tasks/List" asp-page-handler="Search" method="get">
+    <input type="text" name="text" />
+    <button type="submit">Search</button>
+</form>
+
 <h2>More pages</h2>
 <ul>
     <li><a asp-page="/Tasks/Stats">Stats</a></li>
