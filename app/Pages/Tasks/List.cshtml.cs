@@ -33,29 +33,26 @@ namespace app.Pages.Tasks
             return Page();
         }
 
-        public async Task OnGetTree(string list)
+        public async Task<IActionResult> OnGetTree(string list)
         {
-            await OnGetList(list);
-            var taskParents = Tasks.Where(task => task.Tag != null).ToDictionary(task => task.Tag!, task => task);
+            var matchingList = await TaskProviders.SelectManyAsync(provider => provider.GetTaskLists()).FirstOrDefaultAsync(taskList => taskList.Id == list);
+            if (matchingList == null) return NotFound("List not found");
+
+            List = matchingList;
+            Title = List.Name;
+
             var tasks = await TaskProviders.SelectManyAsync(provider => provider.GetTasks()).ToListAsync();
-            tasks = tasks.Where(task => task.Tags.Count > 0).ToList();
-            foreach (var depth in Enumerable.Range(0, 10))
+            tasks = tasks.OrderBy(task => task.SortKey).ToList();
+            var taskParents = tasks.Where(task => task.Tag != null).ToDictionary(task => task.Tag!, task => task);
+            foreach (var task in tasks.Where(task => task.Tags.Count > 0))
             {
-                var remainingTasks = new List<TaskModel>();
-                foreach (var task in tasks)
+                if (taskParents.ContainsKey(task.Tags[0]))
                 {
-                    if (taskParents.ContainsKey(task.Tags[0]))
-                    {
-                        taskParents[task.Tags[0]].Children.Add(task);
-                        if (task.Tag != null) taskParents[task.Tag] = task;
-                    }
-                    else
-                    {
-                        remainingTasks.Add(task);
-                    }
+                    taskParents[task.Tags[0]].Children.Add(task);
                 }
-                tasks = remainingTasks;
             }
+            Tasks = tasks.Where(task => task.ParentId == matchingList.ItemId);
+            return Page();
         }
 
         public async Task OnGetSearch(string text)
