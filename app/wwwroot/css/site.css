@@ -90,10 +90,8 @@ ul > iframe.seamless {
   margin: 0;
 }
 
-.tasks-show-completed:not(:has(:checked)) ~ .tasks .task--completed {
-  display: none;
-}
-
-.tasks-show-unimportant:not(:has(:checked)) ~ .tasks .task--unimportant:not(:has(> .task__children)) {
+.tasks-show-completed:not(:has(:checked)) + .tasks-show-unimportant:not(:has(:checked)) ~ .tasks :is(.task--completed, .task--unimportant):not(:has(.task--uncompleted.task--important)),
+.tasks-show-completed:has(:checked) + .tasks-show-unimportant:not(:has(:checked)) ~ .tasks .task--unimportant:not(:has(.task--important)),
+.tasks-show-completed:not(:has(:checked)) + .tasks-show-unimportant:has(:checked) ~ .tasks .task--completed:not(:has(.task--uncompleted)) {
   display: none;
 }

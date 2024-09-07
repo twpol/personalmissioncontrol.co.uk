@@ -1,4 +1,6 @@
 using System;
+using System.Collections.Generic;
+using System.Linq;
 using Markdig;
 using Markdig.Parsers;
 using Markdig.Parsers.Inlines;
@@ -27,9 +29,15 @@ namespace app.Models
         public string SortKey => $"{(IsCompleted ? 2 : 1)}{(IsImportant ? 1 : 2)} {Title}";
 
         [JsonIgnore]
-        public string? NestedTag => Title.StartsWith("#") ? Title.Split(' ')[0][1..] : null;
+        IEnumerable<string> TitleWords => Title.Split(' ', StringSplitOptions.RemoveEmptyEntries);
 
         [JsonIgnore]
-        public string NestedUrl => $"/Tasks/Children?hashtag={NestedTag}&layout=nested";
+        public string? Tag => TitleWords.Take(1).Where(tag => tag.StartsWith("#")).FirstOrDefault();
+
+        [JsonIgnore]
+        public List<string> Tags => TitleWords.Skip(1).Where(tag => tag.StartsWith("#")).ToList();
+
+        [JsonIgnore]
+        public List<TaskModel> Children = new();
     }
 }
