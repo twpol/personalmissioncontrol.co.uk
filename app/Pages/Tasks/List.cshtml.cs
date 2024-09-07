@@ -1,6 +1,5 @@
 using System.Collections.Generic;
 using System.Linq;
-using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using app.Models;
 using app.Services;
@@ -15,7 +14,6 @@ namespace app.Pages.Tasks
         public string Title = null!;
         public TaskListModel List = null!;
         public IEnumerable<TaskModel> Tasks = null!;
-        public bool Nested;
 
         readonly IList<ITaskProvider> TaskProviders;
 
@@ -37,27 +35,35 @@ namespace app.Pages.Tasks
 
         public async Task OnGetTree(string list)
         {
-            Nested = true;
             await OnGetList(list);
+            var taskParents = Tasks.Where(task => task.Tag != null).ToDictionary(task => task.Tag!, task => task);
+            var tasks = await TaskProviders.SelectManyAsync(provider => provider.GetTasks()).ToListAsync();
+            tasks = tasks.Where(task => task.Tags.Count > 0).ToList();
+            foreach (var depth in Enumerable.Range(0, 10))
+            {
+                var remainingTasks = new List<TaskModel>();
+                foreach (var task in tasks)
+                {
+                    if (taskParents.ContainsKey(task.Tags[0]))
+                    {
+                        taskParents[task.Tags[0]].Children.Add(task);
+                        if (task.Tag != null) taskParents[task.Tag] = task;
+                    }
+                    else
+                    {
+                        remainingTasks.Add(task);
+                    }
+                }
+                tasks = remainingTasks;
+            }
         }
 
         public async Task OnGetSearch(string text)
         {
             Title = text;
-            Nested = HttpContext.Request.Query["layout"] == "nested";
 
             var tasks = await TaskProviders.SelectManyAsync(provider => provider.GetTasks()).ToListAsync();
             Tasks = tasks.Where(task => task.Title.Contains(Title)).OrderBy(task => task.SortKey);
-        }
-
-        public async Task OnGetChildren(string hashtag)
-        {
-            Title = $"#{hashtag}";
-            Nested = HttpContext.Request.Query["layout"] == "nested";
-
-            var tasks = await TaskProviders.SelectManyAsync(provider => provider.GetTasks()).ToListAsync();
-            var pattern = new Regex($@". #{hashtag}(?: |$)");
-            Tasks = tasks.Where(task => pattern.IsMatch(task.Title)).OrderBy(task => task.SortKey);
         }
     }
 }

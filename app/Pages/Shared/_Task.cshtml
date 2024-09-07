@@ -24,10 +24,10 @@
             <span class="px-1 flex-shrink-0 datetime-local" data-ts="@Model.Completed?.ToString("o")"></span>
         }
     </div>
-    @if (ViewData["Nested"] as bool? == true && Model.NestedTag != null)
-    {
-        <div hx-get="@Model.NestedUrl" hx-trigger="load" hx-select=".tasks" class="task__children ml-5">
-            <div class="w-50 bg-light rounded-pill">&nbsp;</div>
-        </div>
-    }
+    <ul class="task__children list-unstyled m-0 ml-5">
+        @foreach (var task in Model.Children)
+        {
+            @await Html.PartialAsync("_Task", task)
+        }
+    </ul>
 </li>
