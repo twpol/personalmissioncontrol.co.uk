@@ -50,6 +50,18 @@ namespace app.Services
             Container = storage.GetContainerAsync(options.Value.StorageDatabase, typeof(T).Name, (int?)options.Value.StorageTTL?.TotalSeconds).Result;
         }
 
+        public async Task SetItemAsync(T item)
+        {
+            if (Logger.IsEnabled(LogLevel.Debug)) Logger.LogDebug($"<{typeof(T).Name}> SetItemAsync({item.AccountId}, {item.ParentId}, {item.ItemId})");
+            await Container.UpsertItemAsync(item, new PartitionKey(item.Id));
+        }
+
+        public async Task DeleteItemAsync(T item)
+        {
+            if (Logger.IsEnabled(LogLevel.Debug)) Logger.LogDebug($"<{typeof(T).Name}> DeleteItemAsync({item.AccountId}, {item.ParentId}, {item.ItemId})");
+            await Container.DeleteItemAsync<T>(item.Id, new PartitionKey(item.Id));
+        }
+
         public async IAsyncEnumerable<T> GetCollectionAsync(string accountId, string? parentId)
         {
             var startTime = Logger.IsEnabled(LogLevel.Debug) ? Stopwatch.GetTimestamp() : 0;

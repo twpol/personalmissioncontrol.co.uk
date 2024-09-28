@@ -10,6 +10,8 @@ using System.Security.Claims;
 using System.Text.Encodings.Web;
 using System.Text.Json;
 using System.Threading.Tasks;
+using app.Models;
+using app.Services;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.OAuth;
 using Microsoft.AspNetCore.Authorization;
@@ -55,8 +57,11 @@ namespace app.Auth
 
     public class MultipleAuthenticationHandler : SignInAuthenticationHandler<MultipleAuthenticationOptions>
     {
-        public MultipleAuthenticationHandler(IOptionsMonitor<MultipleAuthenticationOptions> options, ILoggerFactory logger, UrlEncoder encoder, ISystemClock clock) : base(options, logger, encoder, clock)
+        IModelStore<AccountModel> Accounts;
+
+        public MultipleAuthenticationHandler(IModelStore<AccountModel> accounts, IOptionsMonitor<MultipleAuthenticationOptions> options, ILoggerFactory logger, UrlEncoder encoder, ISystemClock clock) : base(options, logger, encoder, clock)
         {
+            Accounts = accounts;
         }
 
         protected override Task<AuthenticateResult> HandleAuthenticateAsync()
@@ -66,11 +71,11 @@ namespace app.Auth
             return Task.FromResult(AuthenticateResult.Success(new AuthenticationTicket(principal, Scheme.Name)));
         }
 
-        protected override Task HandleSignInAsync(ClaimsPrincipal user, AuthenticationProperties? properties)
+        protected override async Task HandleSignInAsync(ClaimsPrincipal user, AuthenticationProperties? properties)
         {
             Debug.Assert(user.Identities.Count() == 1, "Cannot HandleSignInAsync with more than one identity in user principal");
             var accountId = (user.Identity as ClaimsIdentity)?.GetAccountId();
-            if (accountId == null || properties == null) return Task.CompletedTask;
+            if (accountId == null || properties == null) return;
 
             properties.SetAccountId(accountId);
             Activity.Current?.AddEvent(new("HandleSignInAsync", tags: new()
@@ -83,14 +88,14 @@ namespace app.Auth
             SetCurrentPrincipal(principal);
 
             Context.Session.Set($"{nameof(MultipleAuthenticationHandler)}:Properties:{accountId}", JsonSerializer.SerializeToUtf8Bytes(properties));
-
-            return Task.CompletedTask;
+            await Accounts.SetItemAsync(new AccountModel(accountId, "", "", properties));
         }
 
-        protected override Task HandleSignOutAsync(AuthenticationProperties? properties)
+        protected override async Task HandleSignOutAsync(AuthenticationProperties? properties)
         {
-            var accountId = properties?.GetAccountId();
-            if (accountId == null) return Task.CompletedTask;
+            if (properties == null) return;
+            var accountId = properties.GetAccountId();
+            if (accountId == null) return;
 
             Activity.Current?.AddEvent(new("HandleSignOutAsync", tags: new()
             {
@@ -101,8 +106,7 @@ namespace app.Auth
             SetCurrentPrincipal(principal);
 
             Context.Session.Remove($"{nameof(MultipleAuthenticationHandler)}:Properties:{accountId}");
-
-            return Task.CompletedTask;
+            await Accounts.DeleteItemAsync(new AccountModel(accountId, "", "", properties));
         }
 
         ClaimsPrincipal GetCurrentPrincipal(Func<ClaimsIdentity, bool> existingFilter)
