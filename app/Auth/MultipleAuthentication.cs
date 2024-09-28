@@ -41,10 +41,13 @@ namespace app.Auth
             return value != null;
         }
 
+        const string AuthenticationPropertiesClaim = "https://personalmissioncontrol.co.uk/2024/claims/AuthenticationProperties";
         public static string? FindFirstValue(this ClaimsIdentity identity, string type) => identity.FindFirst(type)?.Value;
         public static string GetId(this ClaimsIdentity identity) => identity.FindFirstValue(ClaimTypes.NameIdentifier) ?? "";
         public static string GetName(this ClaimsIdentity identity) => identity.FindFirstValue(ClaimTypes.Name) ?? $"{identity.FindFirstValue(ClaimTypes.GivenName)} {identity.FindFirstValue(ClaimTypes.Surname)}";
         public static string? GetAccountId(this ClaimsIdentity identity) => identity.AuthenticationType != null ? $"{identity.AuthenticationType}:{identity.FindFirstValue(ClaimTypes.NameIdentifier)}" : null;
+        public static void SetAuthenticationProperties(this ClaimsIdentity identity, AuthenticationProperties properties) => identity.AddClaim(new Claim(AuthenticationPropertiesClaim, JsonSerializer.Serialize(properties)));
+        public static AuthenticationProperties? GetAuthenticationProperties(this ClaimsIdentity identity) => identity.FindFirst(AuthenticationPropertiesClaim) is Claim claim ? JsonSerializer.Deserialize<AuthenticationProperties>(claim.Value) : null;
 
         const string AccountIdKey = ".AccountId";
         internal static void SetAccountId(this AuthenticationProperties properties, string account) => properties.SetString(AccountIdKey, account);
@@ -74,10 +77,13 @@ namespace app.Auth
         protected override async Task HandleSignInAsync(ClaimsPrincipal user, AuthenticationProperties? properties)
         {
             Debug.Assert(user.Identities.Count() == 1, "Cannot HandleSignInAsync with more than one identity in user principal");
-            var accountId = (user.Identity as ClaimsIdentity)?.GetAccountId();
-            if (accountId == null || properties == null) return;
+            if (user.Identity is not ClaimsIdentity identity) return;
+            if (properties == null) return;
+            var accountId = identity.GetAccountId();
+            if (accountId == null) return;
 
             properties.SetAccountId(accountId);
+            identity.SetAuthenticationProperties(properties);
             Activity.Current?.AddEvent(new("HandleSignInAsync", tags: new()
             {
                 { "auth.account_id", accountId },
@@ -87,7 +93,6 @@ namespace app.Auth
             principal.AddIdentities(user.Identities);
             SetCurrentPrincipal(principal);
 
-            Context.Session.Set($"{nameof(MultipleAuthenticationHandler)}:Properties:{accountId}", JsonSerializer.SerializeToUtf8Bytes(properties));
             await Accounts.SetItemAsync(new AccountModel(accountId, "", "", properties));
         }
 
@@ -105,7 +110,6 @@ namespace app.Auth
             var principal = GetCurrentPrincipal(identity => identity.GetAccountId() == accountId);
             SetCurrentPrincipal(principal);
 
-            Context.Session.Remove($"{nameof(MultipleAuthenticationHandler)}:Properties:{accountId}");
             await Accounts.DeleteItemAsync(new AccountModel(accountId, "", "", properties));
         }
 
@@ -191,23 +195,24 @@ namespace app.Auth
 
         public bool TryGetAuthentication(string scheme, [NotNullWhen(true)] out AuthenticationProperties? value)
         {
+            value = null;
+            if (ContextAccessor.HttpContext == null) return false;
+
             using var activity = Startup.ActivitySource.StartActivity();
             activity?.SetTag("auth.scheme", scheme);
             activity?.SetTag("auth.refresh", false);
             activity?.SetTag("auth.success", false);
 
-            value = null;
-            var sessionKeyPrefix = $"{nameof(MultipleAuthenticationHandler)}:Properties:{scheme}:";
-            var sessions = ContextAccessor.HttpContext?.Session.Keys.Where(key => key.StartsWith(sessionKeyPrefix));
-            if (sessions == null || !sessions.Any()) return false;
             // TODO: This will need refactoring to support multiple authentications to the same provider
-            if (!(ContextAccessor.HttpContext?.Session.TryGetValue(sessions.First(), out var propertiesData) ?? false)) return false;
+            var identity = ContextAccessor.HttpContext.User.Identities.FirstOrDefault(id => id.AuthenticationType == scheme);
+            if (identity == null) return false;
 
-            var json = JsonSerializer.Deserialize<AuthenticationPropertiesJson>(propertiesData);
-            if (json == null) return false;
+            value = identity.GetAuthenticationProperties();
+            if (value == null) return false;
 
-            value = new AuthenticationProperties(json.Items);
             var accountId = value.GetAccountId();
+            if (accountId == null) return false;
+
             var expiresAt = value.GetTokenValue("expires_at");
             var refreshToken = value.GetTokenValue("refresh_token");
             activity?.SetTag("auth.account_id", accountId);
@@ -246,14 +251,9 @@ namespace app.Auth
                         value.UpdateTokenValue("expires_at", newExpiresAt.ToString("o", CultureInfo.InvariantCulture));
                         activity?.SetTag("auth.expires_at_new", value.GetTokenValue("expires_at"));
                     }
-                    var user = ContextAccessor.HttpContext.AuthenticateAsync().Result.Principal;
-                    var identity = user?.Identities.FirstOrDefault(id => id.GetAccountId() == accountId);
-                    if (identity != null)
-                    {
-                        ContextAccessor.HttpContext.SignInAsync(new ClaimsPrincipal(identity), value).Wait();
-                        activity?.SetTag("auth.success", true);
-                        return true;
-                    }
+                    ContextAccessor.HttpContext.SignInAsync(new ClaimsPrincipal(identity), value).Wait();
+                    activity?.SetTag("auth.success", true);
+                    return true;
                 }
             }
 
