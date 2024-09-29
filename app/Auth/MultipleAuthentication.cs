@@ -1,19 +1,14 @@
 using System;
-using System.Collections.Generic;
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
-using System.Globalization;
 using System.IO;
 using System.Linq;
-using System.Net.Http;
 using System.Security.Claims;
 using System.Text.Encodings.Web;
 using System.Text.Json;
 using System.Threading.Tasks;
-using app.Models;
 using app.Services;
 using Microsoft.AspNetCore.Authentication;
-using Microsoft.AspNetCore.Authentication.OAuth;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Authorization.Policy;
 using Microsoft.AspNetCore.Http;
@@ -41,13 +36,10 @@ namespace app.Auth
             return value != null;
         }
 
-        const string AuthenticationPropertiesClaim = "https://personalmissioncontrol.co.uk/2024/claims/AuthenticationProperties";
         public static string? FindFirstValue(this ClaimsIdentity identity, string type) => identity.FindFirst(type)?.Value;
         public static string GetId(this ClaimsIdentity identity) => identity.FindFirstValue(ClaimTypes.NameIdentifier) ?? "";
         public static string GetName(this ClaimsIdentity identity) => identity.FindFirstValue(ClaimTypes.Name) ?? $"{identity.FindFirstValue(ClaimTypes.GivenName)} {identity.FindFirstValue(ClaimTypes.Surname)}";
         public static string? GetAccountId(this ClaimsIdentity identity) => identity.AuthenticationType != null ? $"{identity.AuthenticationType}:{identity.FindFirstValue(ClaimTypes.NameIdentifier)}" : null;
-        public static void SetAuthenticationProperties(this ClaimsIdentity identity, AuthenticationProperties properties) => identity.AddClaim(new Claim(AuthenticationPropertiesClaim, JsonSerializer.Serialize(properties)));
-        public static AuthenticationProperties? GetAuthenticationProperties(this ClaimsIdentity identity) => identity.FindFirst(AuthenticationPropertiesClaim) is Claim claim ? JsonSerializer.Deserialize<AuthenticationProperties>(claim.Value) : null;
 
         const string AccountIdKey = ".AccountId";
         internal static void SetAccountId(this AuthenticationProperties properties, string account) => properties.SetString(AccountIdKey, account);
@@ -60,11 +52,11 @@ namespace app.Auth
 
     public class MultipleAuthenticationHandler : SignInAuthenticationHandler<MultipleAuthenticationOptions>
     {
-        IModelStore<AccountModel> Accounts;
+        AuthenticationContext AuthenticationContext;
 
-        public MultipleAuthenticationHandler(IModelStore<AccountModel> accounts, IOptionsMonitor<MultipleAuthenticationOptions> options, ILoggerFactory logger, UrlEncoder encoder, ISystemClock clock) : base(options, logger, encoder, clock)
+        public MultipleAuthenticationHandler(AuthenticationContext authenticationContext, IOptionsMonitor<MultipleAuthenticationOptions> options, ILoggerFactory logger, UrlEncoder encoder, ISystemClock clock) : base(options, logger, encoder, clock)
         {
-            Accounts = accounts;
+            AuthenticationContext = authenticationContext;
         }
 
         protected override Task<AuthenticateResult> HandleAuthenticateAsync()
@@ -83,7 +75,6 @@ namespace app.Auth
             if (accountId == null) return;
 
             properties.SetAccountId(accountId);
-            identity.SetAuthenticationProperties(properties);
             Activity.Current?.AddEvent(new("HandleSignInAsync", tags: new()
             {
                 { "auth.account_id", accountId },
@@ -93,7 +84,7 @@ namespace app.Auth
             principal.AddIdentities(user.Identities);
             SetCurrentPrincipal(principal);
 
-            await Accounts.SetItemAsync(new AccountModel(accountId, "", "", properties));
+            await AuthenticationContext.SetAccount(accountId, properties);
         }
 
         protected override async Task HandleSignOutAsync(AuthenticationProperties? properties)
@@ -110,7 +101,7 @@ namespace app.Auth
             var principal = GetCurrentPrincipal(identity => identity.GetAccountId() == accountId);
             SetCurrentPrincipal(principal);
 
-            await Accounts.DeleteItemAsync(new AccountModel(accountId, "", "", properties));
+            await AuthenticationContext.RemoveAccount(accountId);
         }
 
         ClaimsPrincipal GetCurrentPrincipal(Func<ClaimsIdentity, bool> existingFilter)
@@ -181,87 +172,4 @@ namespace app.Auth
             return Task.CompletedTask;
         }
     }
-
-    public class MultipleAuthenticationContext<T> where T : OAuthOptions
-    {
-        readonly IHttpContextAccessor ContextAccessor;
-        readonly IOptionsMonitor<T> OptionsMonitor;
-
-        public MultipleAuthenticationContext(IHttpContextAccessor contextAccessor, IOptionsMonitor<T> optionsMonitor)
-        {
-            ContextAccessor = contextAccessor;
-            OptionsMonitor = optionsMonitor;
-        }
-
-        public bool TryGetAuthentication(string scheme, [NotNullWhen(true)] out AuthenticationProperties? value)
-        {
-            value = null;
-            if (ContextAccessor.HttpContext == null) return false;
-
-            using var activity = Startup.ActivitySource.StartActivity();
-            activity?.SetTag("auth.scheme", scheme);
-            activity?.SetTag("auth.refresh", false);
-            activity?.SetTag("auth.success", false);
-
-            // TODO: This will need refactoring to support multiple authentications to the same provider
-            var identity = ContextAccessor.HttpContext.User.Identities.FirstOrDefault(id => id.AuthenticationType == scheme);
-            if (identity == null) return false;
-
-            value = identity.GetAuthenticationProperties();
-            if (value == null) return false;
-
-            var accountId = value.GetAccountId();
-            if (accountId == null) return false;
-
-            var expiresAt = value.GetTokenValue("expires_at");
-            var refreshToken = value.GetTokenValue("refresh_token");
-            activity?.SetTag("auth.account_id", accountId);
-            activity?.SetTag("auth.expires_at", expiresAt);
-            activity?.SetTag("auth.refresh_token_exists", refreshToken != null);
-            if (expiresAt == null || refreshToken == null || (DateTimeOffset.Parse(expiresAt) - DateTimeOffset.Now).TotalMinutes > 5)
-            {
-                activity?.SetTag("auth.success", true);
-                return true;
-            }
-            activity?.SetTag("auth.refresh", true);
-
-            // At this point, we need to refresh the nearly or actually expired token
-            var options = OptionsMonitor.Get(scheme);
-            var content = new FormUrlEncodedContent(new Dictionary<string, string>
-            {
-                { "client_id", options.ClientId },
-                { "client_secret", options.ClientSecret },
-                { "grant_type", "refresh_token" },
-                { "refresh_token", refreshToken },
-            });
-            var response = options.Backchannel.PostAsync(options.TokenEndpoint, content, ContextAccessor.HttpContext.RequestAborted).Result;
-            activity?.SetTag("auth.refresh_status_code", (int)response.StatusCode);
-            if (response.IsSuccessStatusCode)
-            {
-                using var payload = JsonDocument.Parse(response.Content.ReadAsStringAsync().Result);
-                var newAccessToken = payload.RootElement.GetString("access_token");
-                var newRefreshToken = payload.RootElement.GetString("refresh_token");
-                if (newAccessToken != null && newRefreshToken != null)
-                {
-                    value.UpdateTokenValue("access_token", newAccessToken);
-                    value.UpdateTokenValue("refresh_token", newRefreshToken);
-                    if (payload.RootElement.TryGetProperty("expires_in", out var property) && property.TryGetInt32(out var seconds))
-                    {
-                        var newExpiresAt = DateTimeOffset.UtcNow + TimeSpan.FromSeconds(seconds);
-                        value.UpdateTokenValue("expires_at", newExpiresAt.ToString("o", CultureInfo.InvariantCulture));
-                        activity?.SetTag("auth.expires_at_new", value.GetTokenValue("expires_at"));
-                    }
-                    ContextAccessor.HttpContext.SignInAsync(new ClaimsPrincipal(identity), value).Wait();
-                    activity?.SetTag("auth.success", true);
-                    return true;
-                }
-            }
-
-            // We failed to refresh the expired token, log out of this account
-            ContextAccessor.HttpContext.SignOutAsync(value);
-            return false;
-        }
-    }
-
-    record AuthenticationPropertiesJson(IDictionary<string, string?> Items);
 }

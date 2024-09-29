@@ -50,6 +50,16 @@ namespace app.Services
             Container = storage.GetContainerAsync(options.Value.StorageDatabase, typeof(T).Name, (int?)options.Value.StorageTTL?.TotalSeconds).Result;
         }
 
+        public async Task<T?> GetItemAsync(string accountId, string parentId, string itemId)
+        {
+            if (Logger.IsEnabled(LogLevel.Debug)) Logger.LogDebug($"<{typeof(T).Name}> GetItemAsync({accountId}, {parentId}, {itemId})");
+            await foreach (var item in Container.GetItemsAsync<T>(model => model.AccountId == accountId && model.ParentId == parentId && model.ItemId == itemId))
+            {
+                return item;
+            }
+            return null;
+        }
+
         public async Task SetItemAsync(T item)
         {
             if (Logger.IsEnabled(LogLevel.Debug)) Logger.LogDebug($"<{typeof(T).Name}> SetItemAsync({item.AccountId}, {item.ParentId}, {item.ItemId})");
