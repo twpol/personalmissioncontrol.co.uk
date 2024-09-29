@@ -57,6 +57,7 @@ namespace app.Auth
         public MultipleAuthenticationHandler(AuthenticationContext authenticationContext, IOptionsMonitor<MultipleAuthenticationOptions> options, ILoggerFactory logger, UrlEncoder encoder, ISystemClock clock) : base(options, logger, encoder, clock)
         {
             AuthenticationContext = authenticationContext;
+            if (Logger.IsEnabled(LogLevel.Debug)) Logger.LogDebug(".ctor()");
         }
 
         protected override Task<AuthenticateResult> HandleAuthenticateAsync()

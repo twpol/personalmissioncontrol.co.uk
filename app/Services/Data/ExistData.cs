@@ -39,12 +39,12 @@ namespace app.Services.Data
             Logger = logger;
             provider.TryGet("Exist", out Channel, out AccountId);
             Habits = habits;
-            if (Logger.IsEnabled(LogLevel.Debug)) Logger.LogDebug($".ctor({AccountId})");
+            if (Logger.IsEnabled(LogLevel.Debug)) Logger.LogDebug(".ctor({AccountId})", AccountId);
         }
 
         public async IAsyncEnumerable<HabitModel> GetHabits()
         {
-            if (Logger.IsEnabled(LogLevel.Debug)) Logger.LogDebug($"GetHabits({AccountId})");
+            if (Logger.IsEnabled(LogLevel.Debug)) Logger.LogDebug("GetHabits({AccountId})", AccountId);
             await foreach (var habit in Habits.GetCollectionAsync(AccountId, ""))
             {
                 yield return habit;
@@ -55,13 +55,13 @@ namespace app.Services.Data
 
         public async Task UpdateHabits()
         {
-            if (Logger.IsEnabled(LogLevel.Debug)) Logger.LogDebug($"UpdateHabits({AccountId})");
+            if (Logger.IsEnabled(LogLevel.Debug)) Logger.LogDebug("UpdateHabits({AccountId})", AccountId);
             await Habits.UpdateCollectionAsync(AccountId, "", UpdateCollectionHabits);
         }
 
         async IAsyncEnumerable<HabitModel> UpdateCollectionHabits()
         {
-            if (Logger.IsEnabled(LogLevel.Debug)) Logger.LogDebug($"UpdateCollectionHabits({AccountId})");
+            if (Logger.IsEnabled(LogLevel.Debug)) Logger.LogDebug("UpdateCollectionHabits({AccountId})", AccountId);
             if (Channel == null) yield break;
             var tags = await ExecutePages<ApiTag>("https://exist.io/api/2/attributes/?groups=custom&limit=100");
             foreach (var tag in tags.Select(tag => FromApi(tag)).Where(tag => tag != null).Cast<HabitModel>())

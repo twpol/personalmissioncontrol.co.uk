@@ -41,7 +41,7 @@ namespace app.Services
 
         public async Task LoadAccount(string accountId)
         {
-            if (Logger.IsEnabled(LogLevel.Debug)) Logger.LogDebug($"LoadAccount({accountId})");
+            if (Logger.IsEnabled(LogLevel.Debug)) Logger.LogDebug("LoadAccount({AccountId})", accountId);
             var account = await Accounts.GetItemAsync(accountId, "", "");
             if (account == null) return;
             AccountModels[accountId] = account;
@@ -49,7 +49,7 @@ namespace app.Services
 
         public async Task SetAccount(string accountId, AuthenticationProperties properties)
         {
-            if (Logger.IsEnabled(LogLevel.Debug)) Logger.LogDebug($"SetAccount({accountId})");
+            if (Logger.IsEnabled(LogLevel.Debug)) Logger.LogDebug("SetAccount({AccountId})", accountId);
             var account = new AccountModel(accountId, "", "", properties);
             await Accounts.SetItemAsync(account);
             AccountModels[accountId] = account;
@@ -57,7 +57,7 @@ namespace app.Services
 
         public async Task RemoveAccount(string accountId)
         {
-            if (Logger.IsEnabled(LogLevel.Debug)) Logger.LogDebug($"RemoveAccount({accountId})");
+            if (Logger.IsEnabled(LogLevel.Debug)) Logger.LogDebug("RemoveAccount({AccountId})", accountId);
             var account = AccountModels[accountId];
             await Accounts.DeleteItemAsync(account);
             AccountModels.Remove(accountId);
@@ -65,7 +65,7 @@ namespace app.Services
 
         public bool TryGetOAuthAuthentication<TOptions>(string scheme, [NotNullWhen(true)] out AuthenticationProperties? value) where TOptions : OAuthOptions
         {
-            if (Logger.IsEnabled(LogLevel.Debug)) Logger.LogDebug($"TryGetOAuthAuthentication({scheme})");
+            if (Logger.IsEnabled(LogLevel.Debug)) Logger.LogDebug("TryGetOAuthAuthentication({Scheme})", scheme);
             value = null;
 
             using var activity = Startup.ActivitySource.StartActivity();

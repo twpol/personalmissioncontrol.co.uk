@@ -48,11 +48,12 @@ namespace app.Services
             Logger = logger;
             UpdateTTL = options.Value.UpdateTTL;
             Container = storage.GetContainerAsync(options.Value.StorageDatabase, typeof(T).Name, (int?)options.Value.StorageTTL?.TotalSeconds).Result;
+            if (Logger.IsEnabled(LogLevel.Debug)) Logger.LogDebug(".ctor()");
         }
 
         public async Task<T?> GetItemAsync(string accountId, string parentId, string itemId)
         {
-            if (Logger.IsEnabled(LogLevel.Debug)) Logger.LogDebug($"<{typeof(T).Name}> GetItemAsync({accountId}, {parentId}, {itemId})");
+            if (Logger.IsEnabled(LogLevel.Debug)) Logger.LogDebug("<{Type}> GetItemAsync({AccountId}, {ParentId}, {ItemId})", typeof(T).Name, accountId, parentId, itemId);
             await foreach (var item in Container.GetItemsAsync<T>(model => model.AccountId == accountId && model.ParentId == parentId && model.ItemId == itemId))
             {
                 return item;
@@ -62,29 +63,29 @@ namespace app.Services
 
         public async Task SetItemAsync(T item)
         {
-            if (Logger.IsEnabled(LogLevel.Debug)) Logger.LogDebug($"<{typeof(T).Name}> SetItemAsync({item.AccountId}, {item.ParentId}, {item.ItemId})");
+            if (Logger.IsEnabled(LogLevel.Debug)) Logger.LogDebug("<{Type}> SetItemAsync({AccountId}, {ParentId}, {ItemId})", typeof(T).Name, item.AccountId, item.ParentId, item.ItemId);
             await Container.UpsertItemAsync(item, new PartitionKey(item.Id));
         }
 
         public async Task DeleteItemAsync(T item)
         {
-            if (Logger.IsEnabled(LogLevel.Debug)) Logger.LogDebug($"<{typeof(T).Name}> DeleteItemAsync({item.AccountId}, {item.ParentId}, {item.ItemId})");
+            if (Logger.IsEnabled(LogLevel.Debug)) Logger.LogDebug("<{Type}> DeleteItemAsync({AccountId}, {ParentId}, {ItemId})", typeof(T).Name, item.AccountId, item.ParentId, item.ItemId);
             await Container.DeleteItemAsync<T>(item.Id, new PartitionKey(item.Id));
         }
 
         public async IAsyncEnumerable<T> GetCollectionAsync(string accountId, string? parentId)
         {
             var startTime = Logger.IsEnabled(LogLevel.Debug) ? Stopwatch.GetTimestamp() : 0;
-            if (Logger.IsEnabled(LogLevel.Debug)) Logger.LogDebug($"<{typeof(T).Name}> GetCollectionAsync({accountId}, {parentId ?? "(null)"})");
+            if (Logger.IsEnabled(LogLevel.Debug)) Logger.LogDebug("<{Type}> GetCollectionAsync({AccountId}, {ParentId})", typeof(T).Name, accountId, parentId);
 
             await foreach (var item in Container.GetItemsAsync<T>(model => model.AccountId == accountId && (parentId == null || model.ParentId == parentId) && model.ItemId != ""))
             {
-                if (Logger.IsEnabled(LogLevel.Trace)) Logger.LogTrace($"<{typeof(T).Name}> GetCollectionAsync({accountId}, {parentId ?? "(null)"}) <{item.Id}> Get");
+                if (Logger.IsEnabled(LogLevel.Trace)) Logger.LogTrace("<{Type}> GetCollectionAsync({AccountId}, {ParentId}) <{ItemId}> Get", typeof(T).Name, accountId, parentId, item.Id);
                 yield return item;
             }
 
             var stopTime = Logger.IsEnabled(LogLevel.Debug) ? Stopwatch.GetTimestamp() : 0;
-            if (Logger.IsEnabled(LogLevel.Debug)) Logger.LogDebug($"<{typeof(T).Name}> GetCollectionAsync({accountId}, {parentId ?? "(null)"}) {(float)(stopTime - startTime) / Stopwatch.Frequency:F3} s");
+            if (Logger.IsEnabled(LogLevel.Debug)) Logger.LogDebug("<{Type}> GetCollectionAsync({AccountId}, {ParentId}) {Duration:F3} s", typeof(T).Name, accountId, parentId, (float)(stopTime - startTime) / Stopwatch.Frequency);
         }
 
         public async Task UpdateCollectionAsync(string accountId, string? parentId, Func<IAsyncEnumerable<T>> updater)
@@ -98,7 +99,7 @@ namespace app.Services
             {
                 container = await GetContainer(containerId);
                 var update = container == null || DateTimeOffset.Parse(container.Change).Add(UpdateTTL.Value) < DateTimeOffset.UtcNow;
-                if (Logger.IsEnabled(LogLevel.Debug)) Logger.LogDebug($"<{typeof(T).Name}> UpdateCollectionAsync({accountId}, {parentId ?? "(null)"}) Change = {container?.Change}, Update = {update}");
+                if (Logger.IsEnabled(LogLevel.Debug)) Logger.LogDebug("<{Type}> UpdateCollectionAsync({AccountId}, {ParentId}) Change = {Change}, Update = {Update}", typeof(T).Name, accountId, parentId, container?.Change, update);
                 if (!update) return;
 
                 if (container == null)
@@ -120,18 +121,18 @@ namespace app.Services
 
             await foreach (var item in updater())
             {
-                if (Logger.IsEnabled(LogLevel.Trace)) Logger.LogTrace($"<{typeof(T).Name}> UpdateCollectionAsync({accountId}, {parentId ?? "(null)"}) <{item.Id}> Upsert");
+                if (Logger.IsEnabled(LogLevel.Trace)) Logger.LogTrace("<{Type}> UpdateCollectionAsync({AccountId}, {ParentId}) <{ItemId}> Upsert", typeof(T).Name, accountId, parentId, item.Id);
                 await Container.UpsertItemAsync(item, new PartitionKey(item.Id));
             }
 
             await foreach (var item in Container.GetItemsAsync<T>(model => model.AccountId == accountId && (parentId == null || model.ParentId == parentId) && model.ItemId != "" && model.TimeStamp < container.TimeStamp))
             {
-                if (Logger.IsEnabled(LogLevel.Trace)) Logger.LogTrace($"<{typeof(T).Name}> UpdateCollectionAsync({accountId}, {parentId ?? "(null)"}) <{item.Id}> Delete");
+                if (Logger.IsEnabled(LogLevel.Trace)) Logger.LogTrace("<{Type}> UpdateCollectionAsync({AccountId}, {ParentId}) <{ItemId}> Delete", typeof(T).Name, accountId, parentId, item.Id);
                 await Container.DeleteItemAsync<T>(item.Id, new PartitionKey(item.Id));
             }
 
             var stopTime = Logger.IsEnabled(LogLevel.Debug) ? Stopwatch.GetTimestamp() : 0;
-            if (Logger.IsEnabled(LogLevel.Debug)) Logger.LogDebug($"<{typeof(T).Name}> UpdateCollectionAsync({accountId}, {parentId ?? "(null)"}) {(float)(stopTime - startTime) / Stopwatch.Frequency:F3} s");
+            if (Logger.IsEnabled(LogLevel.Debug)) Logger.LogDebug("<{Type}> UpdateCollectionAsync({AccountId}, {ParentId}) {Duration:F3} s", typeof(T).Name, accountId, parentId, (float)(stopTime - startTime) / Stopwatch.Frequency);
         }
 
         async Task<CollectionModel?> GetContainer(string containerId)

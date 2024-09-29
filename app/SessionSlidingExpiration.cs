@@ -21,6 +21,7 @@ namespace app
             Logger = logger;
             IdleTimeout = options.Value.IdleTimeout;
             CookieBuilder = options.Value.Cookie;
+            if (Logger.IsEnabled(LogLevel.Debug)) Logger.LogDebug(".ctor()");
         }
 
         public async Task InvokeAsync(HttpContext context)
@@ -29,14 +30,14 @@ namespace app
             if (DateTimeOffset.TryParse(context.Session.GetString("SessionSlidingExpiry"), out var expiry) &&
                 DateTimeOffset.TryParse(context.Session.GetString("SessionSlidingRefresh"), out var refresh))
             {
-                if (Logger.IsEnabled(LogLevel.Debug)) Logger.LogDebug($"Got expiry of {expiry} and refresh of {refresh}");
+                if (Logger.IsEnabled(LogLevel.Debug)) Logger.LogDebug("Got expiry of {Expiry} and refresh of {Refresh}", expiry, refresh);
                 Activity.Current?.SetTag("session.expiry", expiry.ToString("o"));
                 Activity.Current?.SetTag("session.refresh", refresh.ToString("o"));
                 if (DateTimeOffset.Now > refresh) ExtendExpiry(context);
             }
             else
             {
-                if (Logger.IsEnabled(LogLevel.Debug)) Logger.LogDebug($"Missing or invalid expiry/refresh");
+                if (Logger.IsEnabled(LogLevel.Debug)) Logger.LogDebug("Missing or invalid expiry/refresh");
                 ExtendExpiry(context);
             }
             await Next(context);
@@ -55,7 +56,7 @@ namespace app
             context.Response.Cookies.Append(CookieBuilder.Name, value, cookieOptions);
             context.Session.SetString("SessionSlidingExpiry", expiry.ToString("o"));
             context.Session.SetString("SessionSlidingRefresh", refresh.ToString("o"));
-            if (Logger.IsEnabled(LogLevel.Debug)) Logger.LogDebug($"Extended expiry to {expiry} and refresh to {refresh}");
+            if (Logger.IsEnabled(LogLevel.Debug)) Logger.LogDebug("Extended expiry to {Expiry} and refresh to {Refresh}", expiry, refresh);
             Activity.Current?.SetTag("session.expiry_new", expiry.ToString("o"));
             Activity.Current?.SetTag("session.refresh_new", refresh.ToString("o"));
         }
