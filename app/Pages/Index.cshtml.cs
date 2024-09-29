@@ -14,10 +14,10 @@ namespace app.Pages
         public IEnumerable<HabitModel> Habits = null!;
         public IEnumerable<TaskModel> Tasks = null!;
 
-        readonly IList<IHabitProvider> HabitProviders;
-        readonly IList<ITaskProvider> TaskProviders;
+        readonly IList<IHabitDataProvider> HabitProviders;
+        readonly IList<ITaskDataProvider> TaskProviders;
 
-        public IndexModel(IEnumerable<IHabitProvider> habitProviders, IEnumerable<ITaskProvider> taskProviders)
+        public IndexModel(IEnumerable<IHabitDataProvider> habitProviders, IEnumerable<ITaskDataProvider> taskProviders)
         {
             HabitProviders = habitProviders.ToList();
             TaskProviders = taskProviders.ToList();

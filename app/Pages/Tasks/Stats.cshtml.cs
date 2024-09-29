@@ -15,9 +15,9 @@ namespace app.Pages.Tasks
     {
         public IEnumerable<DisplayWeek> Weeks = null!;
 
-        readonly IList<ITaskProvider> TaskProviders;
+        readonly IList<ITaskDataProvider> TaskProviders;
 
-        public StatsModel(IEnumerable<ITaskProvider> taskProviders)
+        public StatsModel(IEnumerable<ITaskDataProvider> taskProviders)
         {
             TaskProviders = taskProviders.ToList();
         }

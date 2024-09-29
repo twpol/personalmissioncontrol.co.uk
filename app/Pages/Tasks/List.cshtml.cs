@@ -15,9 +15,9 @@ namespace app.Pages.Tasks
         public TaskListModel List = null!;
         public IEnumerable<TaskModel> Tasks = null!;
 
-        readonly IList<ITaskProvider> TaskProviders;
+        readonly IList<ITaskDataProvider> TaskProviders;
 
-        public ListModel(IEnumerable<ITaskProvider> taskProviders)
+        public ListModel(IEnumerable<ITaskDataProvider> taskProviders)
         {
             TaskProviders = taskProviders.ToList();
         }

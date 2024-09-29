@@ -19,12 +19,13 @@ namespace app.Services.Data
         public static IServiceCollection AddExistData(this IServiceCollection services)
         {
             services.AddScoped<ExistData>();
-            services.AddScoped<IHabitProvider, ExistData>(s => s.GetRequiredService<ExistData>());
+            services.AddScoped<IDataProvider, ExistData>(s => s.GetRequiredService<ExistData>());
+            services.AddScoped<IHabitDataProvider, ExistData>(s => s.GetRequiredService<ExistData>());
             return services;
         }
     }
 
-    public class ExistData : IHabitProvider
+    public class ExistData : IHabitDataProvider
     {
         static readonly Regex HabitPrefix = new("^(?:[a-z0-9] )?habit (?<flags>(?:[0-9]+p[0-9]+|[0-9]+r|d[0-9-]+) )+(?<name>.*)$");
         static readonly TextInfo TextInfo = new CultureInfo("en-GB").TextInfo;
@@ -39,29 +40,33 @@ namespace app.Services.Data
             Logger = logger;
             provider.TryGet("Exist", out Channel, out AccountId);
             Habits = habits;
-            if (Logger.IsEnabled(LogLevel.Debug)) Logger.LogDebug($".ctor({AccountId})");
+            if (Logger.IsEnabled(LogLevel.Debug)) Logger.LogDebug(".ctor({AccountId})", AccountId);
+        }
+
+        public async Task UpdateData()
+        {
+            if (Logger.IsEnabled(LogLevel.Debug)) Logger.LogDebug("UpdateData({AccountId})", AccountId);
+            await UpdateHabits();
         }
 
         public async IAsyncEnumerable<HabitModel> GetHabits()
         {
-            if (Logger.IsEnabled(LogLevel.Debug)) Logger.LogDebug($"GetHabits({AccountId})");
+            if (Logger.IsEnabled(LogLevel.Debug)) Logger.LogDebug("GetHabits({AccountId})", AccountId);
             await foreach (var habit in Habits.GetCollectionAsync(AccountId, ""))
             {
                 yield return habit;
             }
-            // Do update in the background
-            _ = UpdateHabits();
         }
 
-        public async Task UpdateHabits()
+        async Task UpdateHabits()
         {
-            if (Logger.IsEnabled(LogLevel.Debug)) Logger.LogDebug($"UpdateHabits({AccountId})");
+            if (Logger.IsEnabled(LogLevel.Debug)) Logger.LogDebug("UpdateHabits({AccountId})", AccountId);
             await Habits.UpdateCollectionAsync(AccountId, "", UpdateCollectionHabits);
         }
 
         async IAsyncEnumerable<HabitModel> UpdateCollectionHabits()
         {
-            if (Logger.IsEnabled(LogLevel.Debug)) Logger.LogDebug($"UpdateCollectionHabits({AccountId})");
+            if (Logger.IsEnabled(LogLevel.Debug)) Logger.LogDebug("UpdateCollectionHabits({AccountId})", AccountId);
             if (Channel == null) yield break;
             var tags = await ExecutePages<ApiTag>("https://exist.io/api/2/attributes/?groups=custom&limit=100");
             foreach (var tag in tags.Select(tag => FromApi(tag)).Where(tag => tag != null).Cast<HabitModel>())

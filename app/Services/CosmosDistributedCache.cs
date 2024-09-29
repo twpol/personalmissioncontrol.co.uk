@@ -31,6 +31,7 @@ namespace app.Services
         {
             Logger = logger;
             Container = storage.GetContainerAsync(options.Value.StorageDatabase, options.Value.StorageContainer, (int)sessionOptions.Value.IdleTimeout.TotalSeconds).Result;
+            if (Logger.IsEnabled(LogLevel.Debug)) Logger.LogDebug(".ctor()");
         }
 
         public byte[]? Get(string key) => GetAsync(key).Result;
@@ -88,7 +89,7 @@ namespace app.Services
                 {
                     if (error is CosmosException ce && ce.StatusCode == System.Net.HttpStatusCode.ServiceUnavailable)
                     {
-                        if (Logger.IsEnabled(LogLevel.Debug)) Logger.LogDebug($"{name} [{i}] <{error.Message}>");
+                        if (Logger.IsEnabled(LogLevel.Debug)) Logger.LogDebug("{Name} [{Index}] <{Message}>", name, i, error.Message);
                         Thread.Sleep(100);
                         continue;
                     }

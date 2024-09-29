@@ -18,12 +18,13 @@ namespace app.Services.Data
         public static IServiceCollection AddMicrosoftData(this IServiceCollection services)
         {
             services.AddScoped<MicrosoftData>();
-            services.AddScoped<ITaskProvider, MicrosoftData>(s => s.GetRequiredService<MicrosoftData>());
+            services.AddScoped<IDataProvider, MicrosoftData>(s => s.GetRequiredService<MicrosoftData>());
+            services.AddScoped<ITaskDataProvider, MicrosoftData>(s => s.GetRequiredService<MicrosoftData>());
             return services;
         }
     }
 
-    public class MicrosoftData : ITaskProvider
+    public class MicrosoftData : ITaskDataProvider
     {
         readonly ILogger<MicrosoftData> Logger;
         readonly GraphServiceClient? Graph;
@@ -37,47 +38,47 @@ namespace app.Services.Data
             graphProvider.TryGet("Microsoft", out Graph, out AccountId);
             TaskLists = taskLists;
             Tasks = tasks;
-            if (Logger.IsEnabled(LogLevel.Debug)) Logger.LogDebug($".ctor({AccountId})");
+            if (Logger.IsEnabled(LogLevel.Debug)) Logger.LogDebug(".ctor({AccountId})", AccountId);
+        }
+
+        public async Task UpdateData()
+        {
+            if (Logger.IsEnabled(LogLevel.Debug)) Logger.LogDebug("UpdateData({AccountId})", AccountId);
+            await UpdateTasks();
         }
 
         public async IAsyncEnumerable<TaskListModel> GetTaskLists()
         {
-            if (Logger.IsEnabled(LogLevel.Debug)) Logger.LogDebug($"GetTaskLists({AccountId})");
+            if (Logger.IsEnabled(LogLevel.Debug)) Logger.LogDebug("GetTaskLists({AccountId})", AccountId);
             await foreach (var taskList in TaskLists.GetCollectionAsync(AccountId, ""))
             {
                 yield return taskList;
             }
-            // Do update in the background
-            _ = UpdateTasks();
         }
 
         public async IAsyncEnumerable<TaskModel> GetTasks()
         {
-            if (Logger.IsEnabled(LogLevel.Debug)) Logger.LogDebug($"GetTasks({AccountId})");
+            if (Logger.IsEnabled(LogLevel.Debug)) Logger.LogDebug("GetTasks({AccountId})", AccountId);
             if (Graph == null) yield break;
             await foreach (var task in Tasks.GetCollectionAsync(AccountId, null))
             {
                 yield return task;
             }
-            // Do update in the background
-            _ = UpdateTasks();
         }
 
         public async IAsyncEnumerable<TaskModel> GetTasks(string listId)
         {
-            if (Logger.IsEnabled(LogLevel.Debug)) Logger.LogDebug($"GetTasks({AccountId}, {listId})");
+            if (Logger.IsEnabled(LogLevel.Debug)) Logger.LogDebug("GetTasks({AccountId}, {ListId})", AccountId, listId);
             if (Graph == null) yield break;
             await foreach (var task in Tasks.GetCollectionAsync(AccountId, listId))
             {
                 yield return task;
             }
-            // Do update in the background
-            _ = UpdateTasks();
         }
 
-        public async Task UpdateTasks()
+        async Task UpdateTasks()
         {
-            if (Logger.IsEnabled(LogLevel.Debug)) Logger.LogDebug($"UpdateTasks({AccountId})");
+            if (Logger.IsEnabled(LogLevel.Debug)) Logger.LogDebug("UpdateTasks({AccountId})", AccountId);
             await TaskLists.UpdateCollectionAsync(AccountId, "", UpdateCollectionTaskLists);
             await foreach (var taskList in TaskLists.GetCollectionAsync(AccountId, ""))
             {
@@ -87,7 +88,7 @@ namespace app.Services.Data
 
         async IAsyncEnumerable<TaskListModel> UpdateCollectionTaskLists()
         {
-            if (Logger.IsEnabled(LogLevel.Debug)) Logger.LogDebug($"UpdateCollectionTaskLists({AccountId})");
+            if (Logger.IsEnabled(LogLevel.Debug)) Logger.LogDebug("UpdateCollectionTaskLists({AccountId})", AccountId);
             if (Graph == null) yield break;
             var lists = await Graph.Me.Todo.Lists.Request().Top(1000).GetAsync();
             foreach (var list in lists.Select(list => FromApi(list)))
@@ -98,7 +99,7 @@ namespace app.Services.Data
 
         async IAsyncEnumerable<TaskModel> UpdateCollectionTasks(string listId)
         {
-            if (Logger.IsEnabled(LogLevel.Debug)) Logger.LogDebug($"UpdateCollectionTasks({AccountId}, {listId})");
+            if (Logger.IsEnabled(LogLevel.Debug)) Logger.LogDebug("UpdateCollectionTasks({AccountId}, {ListId})", AccountId, listId);
             if (Graph == null) yield break;
             var tasks = await Graph.Me.Todo.Lists[listId].Tasks.Request().Top(1000).GetAsync();
             foreach (var task in tasks.Select(task => FromApi(listId, task)))

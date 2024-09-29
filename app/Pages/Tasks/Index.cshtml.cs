@@ -13,9 +13,9 @@ namespace app.Pages.Tasks
     {
         public IEnumerable<TaskListModel> Lists = null!;
 
-        readonly IList<ITaskProvider> TaskProviders;
+        readonly IList<ITaskDataProvider> TaskProviders;
 
-        public IndexModel(IEnumerable<ITaskProvider> taskProviders)
+        public IndexModel(IEnumerable<ITaskDataProvider> taskProviders)
         {
             TaskProviders = taskProviders.ToList();
         }

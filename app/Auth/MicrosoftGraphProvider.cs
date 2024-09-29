@@ -2,6 +2,7 @@ using System.Diagnostics.CodeAnalysis;
 using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Threading.Tasks;
+using app.Services;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.MicrosoftAccount;
 using Microsoft.Graph;
@@ -10,9 +11,9 @@ namespace app.Auth
 {
     public class MicrosoftGraphProvider
     {
-        readonly MultipleAuthenticationContext<MicrosoftAccountOptions> AuthenticationContext;
+        readonly AuthenticationContext AuthenticationContext;
 
-        public MicrosoftGraphProvider(MultipleAuthenticationContext<MicrosoftAccountOptions> authenticationContext)
+        public MicrosoftGraphProvider(AuthenticationContext authenticationContext)
         {
             AuthenticationContext = authenticationContext;
         }
@@ -21,7 +22,7 @@ namespace app.Auth
         {
             client = null;
             accountId = "";
-            if (!AuthenticationContext.TryGetAuthentication(scheme, out var auth)) return false;
+            if (!AuthenticationContext.TryGetOAuthAuthentication<MicrosoftAccountOptions>(scheme, out var auth)) return false;
 
             var type = auth.GetTokenValue("token_type");
             var token = auth.GetTokenValue("access_token");

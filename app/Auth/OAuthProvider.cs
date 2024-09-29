@@ -1,6 +1,7 @@
 using System.Diagnostics.CodeAnalysis;
 using System.Net.Http;
 using System.Net.Http.Headers;
+using app.Services;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.OAuth;
 
@@ -8,9 +9,9 @@ namespace app.Auth
 {
     public class OAuthProvider
     {
-        readonly MultipleAuthenticationContext<OAuthOptions> AuthenticationContext;
+        readonly AuthenticationContext AuthenticationContext;
 
-        public OAuthProvider(MultipleAuthenticationContext<OAuthOptions> authenticationContext)
+        public OAuthProvider(AuthenticationContext authenticationContext)
         {
             AuthenticationContext = authenticationContext;
         }
@@ -19,7 +20,7 @@ namespace app.Auth
         {
             client = null;
             accountId = "";
-            if (!AuthenticationContext.TryGetAuthentication(scheme, out var auth)) return false;
+            if (!AuthenticationContext.TryGetOAuthAuthentication<OAuthOptions>(scheme, out var auth)) return false;
 
             var type = auth.GetTokenValue("token_type");
             var token = auth.GetTokenValue("access_token");

@@ -5,8 +5,6 @@ using app.Auth;
 using app.Services;
 using app.Services.Data;
 using Microsoft.AspNetCore.Authentication;
-using Microsoft.AspNetCore.Authentication.MicrosoftAccount;
-using Microsoft.AspNetCore.Authentication.OAuth;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
@@ -122,14 +120,14 @@ namespace app
             });
 
             services.AddSingleton<IAuthorizationMiddlewareResultHandler, MultipleAuthenticationAuthorizationMiddlewareResultHandler>();
-            services.AddSingleton<MultipleAuthenticationContext<OAuthOptions>>();
-            services.AddSingleton<MultipleAuthenticationContext<MicrosoftAccountOptions>>();
+            services.AddAuthenticationContext();
 
             services.AddScoped<OAuthProvider>();
             services.AddScoped<MicrosoftGraphProvider>();
 
             services.AddExistData();
             services.AddMicrosoftData();
+            services.AddBackgroundDataUpdate();
 
             services.AddControllers();
 
@@ -169,6 +167,7 @@ namespace app
             app.UseSessionSlidingExpiration();
             app.UseAuthentication();
             app.UseAuthorization();
+            app.UseAuthenticationContext();
 
             app.UseEndpoints(endpoints =>
             {
