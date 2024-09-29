@@ -127,6 +127,7 @@ namespace app
 
             services.AddExistData();
             services.AddMicrosoftData();
+            services.AddBackgroundDataUpdate();
 
             services.AddControllers();
 

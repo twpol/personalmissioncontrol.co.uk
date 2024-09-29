@@ -1,12 +1,10 @@
 using System.Collections.Generic;
-using System.Threading.Tasks;
 using app.Models;
 
 namespace app.Services
 {
-    public interface IHabitProvider
+    public interface IHabitDataProvider : IDataProvider
     {
         public IAsyncEnumerable<HabitModel> GetHabits();
-        public Task UpdateHabits();
     }
 }

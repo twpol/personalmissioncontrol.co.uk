@@ -73,6 +73,21 @@ namespace app.Services
             await Container.DeleteItemAsync<T>(item.Id, new PartitionKey(item.Id));
         }
 
+        public async IAsyncEnumerable<T> GetCollectionsAsync(string? accountId, string? parentId)
+        {
+            var startTime = Logger.IsEnabled(LogLevel.Debug) ? Stopwatch.GetTimestamp() : 0;
+            if (Logger.IsEnabled(LogLevel.Debug)) Logger.LogDebug("<{Type}> GetCollectionsAsync({AccountId}, {ParentId})", typeof(T).Name, accountId, parentId);
+
+            await foreach (var item in Container.GetItemsAsync<T>(model => (accountId == null || model.AccountId == accountId) && (parentId == null || model.ParentId == parentId) && model.ItemId == ""))
+            {
+                if (Logger.IsEnabled(LogLevel.Trace)) Logger.LogTrace("<{Type}> GetCollectionsAsync({AccountId}, {ParentId}) <{ItemId}> Get", typeof(T).Name, accountId, parentId, item.Id);
+                yield return item;
+            }
+
+            var stopTime = Logger.IsEnabled(LogLevel.Debug) ? Stopwatch.GetTimestamp() : 0;
+            if (Logger.IsEnabled(LogLevel.Debug)) Logger.LogDebug("<{Type}> GetCollectionsAsync({AccountId}, {ParentId}) {Duration:F3} s", typeof(T).Name, accountId, parentId, (float)(stopTime - startTime) / Stopwatch.Frequency);
+        }
+
         public async IAsyncEnumerable<T> GetCollectionAsync(string accountId, string? parentId)
         {
             var startTime = Logger.IsEnabled(LogLevel.Debug) ? Stopwatch.GetTimestamp() : 0;

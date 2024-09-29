@@ -47,6 +47,12 @@ namespace app.Services
             AccountModels[accountId] = account;
         }
 
+        public void AddAccount(AccountModel account)
+        {
+            if (Logger.IsEnabled(LogLevel.Debug)) Logger.LogDebug("AddAccount({AccountId})", account.AccountId);
+            AccountModels[account.AccountId] = account;
+        }
+
         public async Task SetAccount(string accountId, AuthenticationProperties properties)
         {
             if (Logger.IsEnabled(LogLevel.Debug)) Logger.LogDebug("SetAccount({AccountId})", accountId);

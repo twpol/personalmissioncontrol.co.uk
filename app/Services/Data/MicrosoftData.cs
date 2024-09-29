@@ -18,12 +18,13 @@ namespace app.Services.Data
         public static IServiceCollection AddMicrosoftData(this IServiceCollection services)
         {
             services.AddScoped<MicrosoftData>();
-            services.AddScoped<ITaskProvider, MicrosoftData>(s => s.GetRequiredService<MicrosoftData>());
+            services.AddScoped<IDataProvider, MicrosoftData>(s => s.GetRequiredService<MicrosoftData>());
+            services.AddScoped<ITaskDataProvider, MicrosoftData>(s => s.GetRequiredService<MicrosoftData>());
             return services;
         }
     }
 
-    public class MicrosoftData : ITaskProvider
+    public class MicrosoftData : ITaskDataProvider
     {
         readonly ILogger<MicrosoftData> Logger;
         readonly GraphServiceClient? Graph;
@@ -40,6 +41,12 @@ namespace app.Services.Data
             if (Logger.IsEnabled(LogLevel.Debug)) Logger.LogDebug(".ctor({AccountId})", AccountId);
         }
 
+        public async Task UpdateData()
+        {
+            if (Logger.IsEnabled(LogLevel.Debug)) Logger.LogDebug("UpdateData({AccountId})", AccountId);
+            await UpdateTasks();
+        }
+
         public async IAsyncEnumerable<TaskListModel> GetTaskLists()
         {
             if (Logger.IsEnabled(LogLevel.Debug)) Logger.LogDebug("GetTaskLists({AccountId})", AccountId);
@@ -47,8 +54,6 @@ namespace app.Services.Data
             {
                 yield return taskList;
             }
-            // Do update in the background
-            _ = UpdateTasks();
         }
 
         public async IAsyncEnumerable<TaskModel> GetTasks()
@@ -59,8 +64,6 @@ namespace app.Services.Data
             {
                 yield return task;
             }
-            // Do update in the background
-            _ = UpdateTasks();
         }
 
         public async IAsyncEnumerable<TaskModel> GetTasks(string listId)
@@ -71,11 +74,9 @@ namespace app.Services.Data
             {
                 yield return task;
             }
-            // Do update in the background
-            _ = UpdateTasks();
         }
 
-        public async Task UpdateTasks()
+        async Task UpdateTasks()
         {
             if (Logger.IsEnabled(LogLevel.Debug)) Logger.LogDebug("UpdateTasks({AccountId})", AccountId);
             await TaskLists.UpdateCollectionAsync(AccountId, "", UpdateCollectionTaskLists);
