@@ -50,6 +50,16 @@ namespace app.Services
             AccountModels[accountId] = account;
         }
 
+        public async Task LoadAccountByKey(string apiKey)
+        {
+            if (Logger.IsEnabled(LogLevel.Debug)) Logger.LogDebug("LoadAccountByKey({ApiKey})", apiKey);
+            if (string.IsNullOrEmpty(apiKey)) return;
+            await foreach (var account in Accounts.GetCollectionsAsync(null, null))
+            {
+                if (account.ApiKey == apiKey) await AddAccount(account);
+            }
+        }
+
         public async Task AddAccount(AccountModel account)
         {
             if (Logger.IsEnabled(LogLevel.Debug)) Logger.LogDebug("AddAccount({AccountId})", account.AccountId);
@@ -169,11 +179,18 @@ namespace app.Services
         {
             if (Logger.IsEnabled(LogLevel.Debug)) Logger.LogDebug("InvokeAsync()");
             var authenticationContext = context.RequestServices.GetRequiredService<AuthenticationContext>();
-            foreach (var identity in context.User.Identities)
+            if (context.Request.Headers.ContainsKey("Api-Key"))
             {
-                var accountId = identity.GetAccountId();
-                if (accountId == null) continue;
-                await authenticationContext.LoadAccount(accountId);
+                await authenticationContext.LoadAccountByKey(context.Request.Headers["Api-Key"]);
+            }
+            else
+            {
+                foreach (var identity in context.User.Identities)
+                {
+                    var accountId = identity.GetAccountId();
+                    if (accountId == null) continue;
+                    await authenticationContext.LoadAccount(accountId);
+                }
             }
             await Next(context);
         }
