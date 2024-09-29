@@ -52,7 +52,7 @@ namespace app.Services
             try
             {
                 using var scope = ServiceScopeFactory.CreateScope();
-                scope.ServiceProvider.GetRequiredService<AuthenticationContext>().AddAccount(account);
+                await scope.ServiceProvider.GetRequiredService<AuthenticationContext>().AddAccount(account);
                 foreach (var provider in scope.ServiceProvider.GetRequiredService<IEnumerable<IDataProvider>>())
                 {
                     await provider.UpdateData();

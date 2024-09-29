@@ -4,6 +4,7 @@ using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
 using System.Linq;
 using System.Net.Http;
+using System.Security.Cryptography;
 using System.Text.Json;
 using System.Threading.Tasks;
 using app.Auth;
@@ -25,6 +26,8 @@ namespace app.Services
 
     public class AuthenticationContext
     {
+        static string GenerateApiKey() => string.Join("", RandomNumberGenerator.GetBytes(32).Select(b => b.ToString("x2")));
+
         public Dictionary<string, AccountModel> AccountModels { get; } = new();
 
         readonly ILogger<AuthenticationContext> Logger;
@@ -47,16 +50,25 @@ namespace app.Services
             AccountModels[accountId] = account;
         }
 
-        public void AddAccount(AccountModel account)
+        public async Task AddAccount(AccountModel account)
         {
             if (Logger.IsEnabled(LogLevel.Debug)) Logger.LogDebug("AddAccount({AccountId})", account.AccountId);
+            if (string.IsNullOrEmpty(account.ApiKey))
+            {
+                account = account with { ApiKey = GenerateApiKey() };
+                await Accounts.SetItemAsync(account);
+                if (Logger.IsEnabled(LogLevel.Debug)) Logger.LogDebug("AddAccount({AccountId}) Set API key", account.AccountId);
+            }
             AccountModels[account.AccountId] = account;
         }
 
         public async Task SetAccount(string accountId, AuthenticationProperties properties)
         {
             if (Logger.IsEnabled(LogLevel.Debug)) Logger.LogDebug("SetAccount({AccountId})", accountId);
-            var account = new AccountModel(accountId, "", "", properties);
+            if (AccountModels.TryGetValue(accountId, out var account))
+                account = account with { AuthenticationProperties = properties };
+            else
+                account = new AccountModel(accountId, "", "", GenerateApiKey(), properties);
             await Accounts.SetItemAsync(account);
             AccountModels[accountId] = account;
         }
