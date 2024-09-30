@@ -43,23 +43,25 @@ public class TasksController : ControllerBase
     }
 
     [HttpPost("lists/{listId}/tasks")]
-    public async Task<IActionResult> CreateTask(string listId, [FromHeader(Name = "If-None-Match")] string? ifNoneMatch, [FromForm] string? title, [FromForm] string? body, [FromForm] bool? isImportant, [FromForm] bool? isCompleted)
+    public async Task<IActionResult> CreateTask(string listId, [FromHeader(Name = "Task-Key")] string? taskKey, [FromForm] string title, [FromForm] string? body, [FromForm] bool? isImportant, [FromForm] bool? isCompleted)
     {
-        if (ifNoneMatch == null && title == null) return BadRequest("Title or If-None-Match is required");
+        if (string.IsNullOrWhiteSpace(title)) return BadRequest("Title is required");
+        if (taskKey != null && !title.Contains(taskKey)) return BadRequest("Title does not contain Task-Key");
+
         var (provider, list) = await GetProviderTaskList(listId);
         if (provider == null || list == null) return NotFound("List not found");
-        if (ifNoneMatch == null) return Ok(await provider.CreateTask(list.ItemId, title ?? "", body ?? "", isImportant ?? false, isCompleted ?? false));
 
-        if (ifNoneMatch.StartsWith("\"") && ifNoneMatch.EndsWith("\"")) ifNoneMatch = ifNoneMatch[1..^1];
-        if (title != null && !title.Contains(ifNoneMatch)) return BadRequest("Title does not contain If-None-Match");
-        var task = await provider.GetTasks(list.ItemId).FirstOrDefaultAsync(t => t.Title.Contains(ifNoneMatch));
-        if (task == null) return NotFound("Task not found");
-        if (title != null) task = task with { Title = title };
-        if (body != null) return BadRequest("Body cannot be updated");
-        if (isImportant.HasValue) task = task with { IsImportant = isImportant.Value };
-        if (isCompleted.HasValue) task = task with { Completed = isCompleted.Value ? DateTimeOffset.UtcNow : null };
-        await provider.UpdateTask(task);
-        return Ok(task);
+        var task = await provider.GetTasks(list.ItemId).FirstOrDefaultAsync(t => taskKey == null ? t.Title == title && !t.IsCompleted : t.Title.Contains(taskKey));
+        if (task != null)
+        {
+            if (title != null) task = task with { Title = title };
+            // TODO: if (body != null) task = task with { Body = body };
+            if (isImportant.HasValue) task = task with { IsImportant = isImportant.Value };
+            if (isCompleted.HasValue && isCompleted.Value != task.IsCompleted) task = task with { Completed = isCompleted.Value ? DateTimeOffset.UtcNow : null };
+            await provider.UpdateTask(task);
+            return Ok(task);
+        }
+        return Ok(await provider.CreateTask(list.ItemId, title, body ?? "", isImportant ?? false, isCompleted ?? false));
     }
 
     async Task<(ITaskDataProvider? Provider, TaskListModel? List)> GetProviderTaskList(string listId)
