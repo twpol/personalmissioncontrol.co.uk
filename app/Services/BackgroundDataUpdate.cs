@@ -31,10 +31,11 @@ namespace app.Services
 
         protected override async Task ExecuteAsync(CancellationToken stoppingToken)
         {
+            await Task.Delay(TimeSpan.FromMinutes(1), stoppingToken);
             while (!stoppingToken.IsCancellationRequested)
             {
-                await Task.Delay(TimeSpan.FromMinutes(5), stoppingToken);
                 await Update();
+                await Task.Delay(TimeSpan.FromMinutes(5), stoppingToken);
             }
         }
 

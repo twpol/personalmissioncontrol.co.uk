@@ -121,9 +121,10 @@ namespace app.Services.Data
             if (Logger.IsEnabled(LogLevel.Debug)) Logger.LogDebug("UpdateCollectionTaskLists({AccountId})", AccountId);
             if (Graph == null) yield break;
             var lists = await Graph.Me.Todo.Lists.Request().Top(1000).GetAsync();
-            foreach (var list in lists.Select(list => FromApi(list)))
+            while (lists != null)
             {
-                yield return list;
+                foreach (var list in lists) yield return FromApi(list);
+                lists = lists.NextPageRequest != null ? await lists.NextPageRequest.GetAsync() : null;
             }
         }
 
@@ -132,9 +133,10 @@ namespace app.Services.Data
             if (Logger.IsEnabled(LogLevel.Debug)) Logger.LogDebug("UpdateCollectionTasks({AccountId}, {ListId})", AccountId, listId);
             if (Graph == null) yield break;
             var tasks = await Graph.Me.Todo.Lists[listId].Tasks.Request().Top(1000).GetAsync();
-            foreach (var task in tasks.Select(task => FromApi(listId, task)))
+            while (tasks != null)
             {
-                yield return task;
+                foreach (var task in tasks) yield return FromApi(listId, task);
+                tasks = tasks.NextPageRequest != null ? await tasks.NextPageRequest.GetAsync() : null;
             }
         }
 
