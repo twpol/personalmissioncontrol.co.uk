@@ -17,6 +17,9 @@ namespace app.Models
             .Build();
 
         [JsonIgnore]
+        public DateTimeOffset EarliestDate => Completed != null && Completed < Created ? Completed.Value : Created;
+
+        [JsonIgnore]
         public string Classes => "task " + (IsCompleted ? "task--completed text-black-50" : "task--uncompleted") + " " + (IsImportant ? "task--important" : "task--unimportant");
 
         [JsonIgnore]

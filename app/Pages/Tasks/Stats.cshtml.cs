@@ -2,7 +2,6 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
-using app.Models;
 using app.Services;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
@@ -31,25 +30,33 @@ namespace app.Pages.Tasks
         {
             var weeks = new List<DisplayWeek>();
 
-            var completedTasks = await GetCompletedTasks();
-            var date = DateTime.Now.Date.AddDays(1 - (int)DateTime.Now.DayOfWeek);
+            var tasks = await TaskProviders.SelectManyAsync(provider => provider.GetTasks()).ToListAsync();
+            var date = DateTime.Now.Date.AddDays(-((int)DateTime.Now.DayOfWeek + 6) % 7);
             for (var week = 0; week < 26; week++)
             {
                 var weekStart = date.AddDays(-7 * week);
                 var weekEnd = weekStart.AddDays(7);
-                var weekTasks = completedTasks.Where(task => weekStart <= task.Completed && task.Completed < weekEnd);
-                weeks.Add(new DisplayWeek(new DateTimeOffset(weekStart), weekTasks.Count()));
+                var weekTasksCreated = tasks.Where(task => weekStart <= task.EarliestDate && task.EarliestDate < weekEnd);
+                var weekTasksCompleted = tasks.Where(task => task.Completed != null && weekStart <= task.Completed && task.Completed < weekEnd);
+                var weekTasksCreatedImportant = weekTasksCreated.Where(task => task.IsImportant);
+                var weekTasksCompletedImportant = weekTasksCompleted.Where(task => task.IsImportant);
+                weeks.Add(new DisplayWeek(
+                    new DateTimeOffset(weekStart),
+                    weekTasksCreated.Count(),
+                    weekTasksCompleted.Count(),
+                    weekTasksCreatedImportant.Count(),
+                    weekTasksCompletedImportant.Count()
+                ));
             }
 
             return weeks;
         }
 
-        async Task<IEnumerable<TaskModel>> GetCompletedTasks()
+        public record DisplayWeek(DateTimeOffset Date, int Created, int Completed, int CreatedImportant, int CompletedImportant)
         {
-            var tasks = await TaskProviders.SelectManyAsync(provider => provider.GetTasks()).ToListAsync();
-            return tasks.Where(task => task.Completed != null);
+            public int CreatedUnimportant => Created - CreatedImportant;
+            public int CompletedUnimportant => Completed - CompletedImportant;
+            public int Delta => Created - Completed;
         }
-
-        public record DisplayWeek(DateTimeOffset Date, int Completed);
     }
 }
