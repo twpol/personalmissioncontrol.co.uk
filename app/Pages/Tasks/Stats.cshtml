@@ -19,11 +19,37 @@
 <script>
     Plotly.newPlot("week-graph", [
         {
+            name: "Delta",
+            type: "scatter",
+            x: [@Html.Raw(string.Join(",",Model.Weeks.Select(w => $"\"{w.Date.ToString("o")}\"")))],
+            y: [@string.Join(",",Model.Weeks.Select(w => w.Delta))],
+        },
+        {
+            name: "Created Important",
             type: "bar",
             x: [@Html.Raw(string.Join(",",Model.Weeks.Select(w => $"\"{w.Date.ToString("o")}\"")))],
-            y: [@string.Join(",",Model.Weeks.Select(w => w.Completed))],
+            y: [@string.Join(",",Model.Weeks.Select(w => w.CreatedImportant))],
+        },
+        {
+            name: "Created Unimportant",
+            type: "bar",
+            x: [@Html.Raw(string.Join(",",Model.Weeks.Select(w => $"\"{w.Date.ToString("o")}\"")))],
+            y: [@string.Join(",",Model.Weeks.Select(w => w.CreatedUnimportant))],
+        },
+        {
+            name: "Completed Important",
+            type: "bar",
+            x: [@Html.Raw(string.Join(",",Model.Weeks.Select(w => $"\"{w.Date.ToString("o")}\"")))],
+            y: [@string.Join(",",Model.Weeks.Select(w => -w.CompletedImportant))],
+        },
+        {
+            name: "Completed Unimportant",
+            type: "bar",
+            x: [@Html.Raw(string.Join(",",Model.Weeks.Select(w => $"\"{w.Date.ToString("o")}\"")))],
+            y: [@string.Join(",",Model.Weeks.Select(w => -w.CompletedUnimportant))],
         },
     ], {
         responsive: true,
+        barmode: 'relative',
     })
 </script>
