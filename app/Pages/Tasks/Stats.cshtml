@@ -53,3 +53,33 @@
         barmode: 'relative',
     })
 </script>
+
+<table>
+    <thead>
+        <tr>
+            <th rowspan="2">Date</th>
+            <th colspan="2">Created</th>
+            <th colspan="2">Completed</th>
+            <th rowspan="2">Delta</th>
+        </tr>
+        <tr>
+            <th>Important</th>
+            <th>Unimportant</th>
+            <th>Important</th>
+            <th>Unimportant</th>
+        </tr>
+    </thead>
+    <tbody>
+        @foreach (var week in Model.Weeks)
+        {
+            <tr>
+                <td>@week.Date.ToString("yyyy'-'MM'-'dd")</td>
+                <td>@week.CreatedImportant</td>
+                <td>@week.CreatedUnimportant</td>
+                <td>@week.CompletedImportant</td>
+                <td>@week.CompletedUnimportant</td>
+                <td>@week.Delta</td>
+            </tr>
+        }
+    </tbody>
+</table>
