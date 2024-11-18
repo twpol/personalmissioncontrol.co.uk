@@ -6,6 +6,18 @@ h1 {
   overflow-wrap: anywhere;
 }
 
+th {
+  text-align: center;
+}
+
+th, td {
+  padding: 0.1rem 0.4rem;
+}
+
+td > pre {
+  margin: 0;
+}
+
 .alert--transient {
   left: 50vw;
   position: fixed;
