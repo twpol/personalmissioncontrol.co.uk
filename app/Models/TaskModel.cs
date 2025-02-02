@@ -24,16 +24,13 @@ namespace app.Models
         public DateTimeOffset EarliestDate => Completed != null && Completed < Created ? Completed.Value : Created;
 
         [JsonIgnore]
-        public string Classes => "task " + (IsCompleted ? "task--completed text-black-50" : "task--uncompleted") + " " + (Important ? "task--important" : "task--unimportant");
+        public string Classes => "task " + (Completed.HasValue ? "task--completed text-black-50" : "task--uncompleted") + " " + (Important ? "task--important" : "task--unimportant");
 
         [JsonIgnore]
         public string NameHtml => Markdown.ToHtml(Name, MarkdownPipeline);
 
         [JsonIgnore]
-        public bool IsCompleted => Completed.HasValue;
-
-        [JsonIgnore]
-        public string SortKey => $"{(IsCompleted ? 2 : 1)}{(Important ? 1 : 2)} {Name}";
+        public string SortKey => $"{(Completed.HasValue ? 2 : 1)}{(Important ? 1 : 2)} {Name}";
 
         [JsonIgnore]
         IEnumerable<string> NameWords => Name.Split(' ', StringSplitOptions.RemoveEmptyEntries);

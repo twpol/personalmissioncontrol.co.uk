@@ -76,7 +76,7 @@ namespace app.Services.Data
             }
         }
 
-        public async Task<TaskModel> CreateTask(string listId, string name, string description, bool important, bool isCompleted)
+        public async Task<TaskModel> CreateTask(string listId, string name, string description, bool important, bool completed)
         {
             if (Logger.IsEnabled(LogLevel.Debug)) Logger.LogDebug("CreateTask({AccountId}, {ListId})", AccountId, listId);
             if (Graph == null) throw new InvalidOperationException("Graph client not available");
@@ -85,7 +85,7 @@ namespace app.Services.Data
                 Title = name,
                 Body = new ItemBody { Content = description, ContentType = BodyType.Text },
                 Importance = important ? Importance.High : Importance.Normal,
-                Status = isCompleted ? Microsoft.Graph.TaskStatus.Completed : Microsoft.Graph.TaskStatus.NotStarted,
+                Status = completed ? Microsoft.Graph.TaskStatus.Completed : Microsoft.Graph.TaskStatus.NotStarted,
             });
             var task = FromApi(listId, createdTask);
             await Tasks.SetItemAsync(task);
@@ -100,8 +100,8 @@ namespace app.Services.Data
             {
                 Title = task.Name,
                 Importance = task.Important ? Importance.High : Importance.Normal,
-                Status = task.IsCompleted ? Microsoft.Graph.TaskStatus.Completed : Microsoft.Graph.TaskStatus.NotStarted,
-                CompletedDateTime = task.IsCompleted ? new DateTimeTimeZone { DateTime = task.Completed!.Value.ToString("o"), TimeZone = "UTC" } : null,
+                Status = task.Completed.HasValue ? Microsoft.Graph.TaskStatus.Completed : Microsoft.Graph.TaskStatus.NotStarted,
+                CompletedDateTime = task.Completed.HasValue ? new DateTimeTimeZone { DateTime = task.Completed.Value.ToString("o"), TimeZone = "UTC" } : null,
             });
             await Tasks.SetItemAsync(task);
         }
