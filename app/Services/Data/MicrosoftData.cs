@@ -76,14 +76,14 @@ namespace app.Services.Data
             }
         }
 
-        public async Task<TaskModel> CreateTask(string listId, string name, string body, bool isImportant, bool isCompleted)
+        public async Task<TaskModel> CreateTask(string listId, string name, string description, bool isImportant, bool isCompleted)
         {
             if (Logger.IsEnabled(LogLevel.Debug)) Logger.LogDebug("CreateTask({AccountId}, {ListId})", AccountId, listId);
             if (Graph == null) throw new InvalidOperationException("Graph client not available");
             var createdTask = await Graph.Me.Todo.Lists[listId].Tasks.Request().AddAsync(new TodoTask
             {
                 Title = name,
-                Body = new ItemBody { Content = body, ContentType = BodyType.Text },
+                Body = new ItemBody { Content = description, ContentType = BodyType.Text },
                 Importance = isImportant ? Importance.High : Importance.Normal,
                 Status = isCompleted ? Microsoft.Graph.TaskStatus.Completed : Microsoft.Graph.TaskStatus.NotStarted,
             });
