@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using app.Filters;
 using app.Models;
 using app.Services;
 using Microsoft.AspNetCore.Mvc;
@@ -9,6 +10,7 @@ using Microsoft.AspNetCore.Mvc;
 namespace app.Controllers;
 
 [ApiController]
+[ApiModelFilter]
 [Route("api/tasks")]
 [Produces("application/json")]
 public class TasksController : ControllerBase
