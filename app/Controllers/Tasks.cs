@@ -45,25 +45,25 @@ public class TasksController : ControllerBase
     }
 
     [HttpPost("lists/{listId}/tasks")]
-    public async Task<IActionResult> CreateTask(string listId, [FromHeader(Name = "Task-Key")] string? taskKey, [FromForm] string title, [FromForm] string? body, [FromForm] bool? isImportant, [FromForm] bool? isCompleted)
+    public async Task<IActionResult> CreateTask(string listId, [FromHeader(Name = "Task-Key")] string? taskKey, [FromForm] string name, [FromForm] string? description, [FromForm] bool? important, [FromForm] DateTimeOffset? completed)
     {
-        if (string.IsNullOrWhiteSpace(title)) return BadRequest("Title is required");
-        if (taskKey != null && !title.Contains(taskKey)) return BadRequest("Title does not contain Task-Key");
+        if (string.IsNullOrWhiteSpace(name)) return BadRequest("Name is required");
+        if (taskKey != null && !name.Contains(taskKey)) return BadRequest("Name does not contain Task-Key");
 
         var (provider, list) = await GetProviderTaskList(listId);
         if (provider == null || list == null) return NotFound("List not found");
 
-        var task = await provider.GetTasks(list.ItemId).FirstOrDefaultAsync(t => taskKey == null ? t.Title == title && !t.IsCompleted : t.Title.Contains(taskKey));
+        var task = await provider.GetTasks(list.ItemId).FirstOrDefaultAsync(t => taskKey == null ? t.Name == name && !t.Completed.HasValue : t.Name.Contains(taskKey));
         if (task != null)
         {
-            if (title != null) task = task with { Title = title };
-            // TODO: if (body != null) task = task with { Body = body };
-            if (isImportant.HasValue) task = task with { IsImportant = isImportant.Value };
-            if (isCompleted.HasValue && isCompleted.Value != task.IsCompleted) task = task with { Completed = isCompleted.Value ? DateTimeOffset.UtcNow : null };
+            if (name != null) task = task with { Title = name };
+            // TODO: if (description != null) task = task with { Description = description };
+            if (important.HasValue) task = task with { IsImportant = important.Value };
+            if (Request.Form.ContainsKey("completed")) task = task with { Completed = completed };
             await provider.UpdateTask(task);
             return Ok(task);
         }
-        return Ok(await provider.CreateTask(list.ItemId, title, body ?? "", isImportant ?? false, isCompleted ?? false));
+        return Ok(await provider.CreateTask(list.ItemId, name, description ?? "", important ?? false, completed));
     }
 
     async Task<(ITaskDataProvider? Provider, TaskListModel? List)> GetProviderTaskList(string listId)

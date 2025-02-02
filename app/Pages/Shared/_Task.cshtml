@@ -2,7 +2,7 @@
 
 <li class="@Model.Classes">
     <div class="task__item d-flex">
-        @if (Model.IsCompleted)
+        @if (Model.Completed.HasValue)
         {
             <i class="px-1 bi bi-check-circle-fill text-green"></i>
         }
@@ -10,7 +10,7 @@
         {
             <i class="px-1 bi bi-circle text-grey"></i>
         }
-        @if (Model.IsImportant)
+        @if (Model.Important)
         {
             <i class="px-1 bi bi-star-fill text-blue"></i>
         }
@@ -18,8 +18,8 @@
         {
             <i class="px-1 bi bi-star text-grey"></i>
         }
-        <span class="px-1 flex-fill text-truncate">@Html.Raw(Model.TitleHtml)</span>
-        @if (Model.IsCompleted)
+        <span class="px-1 flex-fill text-truncate">@Html.Raw(Model.NameHtml)</span>
+        @if (Model.Completed.HasValue)
         {
             <span class="px-1 flex-shrink-0 datetime-local" data-ts="@Model.Completed?.ToString("o")"></span>
         }

@@ -76,16 +76,17 @@ namespace app.Services.Data
             }
         }
 
-        public async Task<TaskModel> CreateTask(string listId, string title, string body, bool isImportant, bool isCompleted)
+        public async Task<TaskModel> CreateTask(string listId, string name, string description, bool important, DateTimeOffset? completed)
         {
             if (Logger.IsEnabled(LogLevel.Debug)) Logger.LogDebug("CreateTask({AccountId}, {ListId})", AccountId, listId);
             if (Graph == null) throw new InvalidOperationException("Graph client not available");
             var createdTask = await Graph.Me.Todo.Lists[listId].Tasks.Request().AddAsync(new TodoTask
             {
-                Title = title,
-                Body = new ItemBody { Content = body, ContentType = BodyType.Text },
-                Importance = isImportant ? Importance.High : Importance.Normal,
-                Status = isCompleted ? Microsoft.Graph.TaskStatus.Completed : Microsoft.Graph.TaskStatus.NotStarted,
+                Title = name,
+                Body = new ItemBody { Content = description, ContentType = BodyType.Text },
+                Importance = important ? Importance.High : Importance.Normal,
+                Status = completed.HasValue ? Microsoft.Graph.TaskStatus.Completed : Microsoft.Graph.TaskStatus.NotStarted,
+                CompletedDateTime = completed.HasValue ? DateTimeTimeZone.FromDateTimeOffset(completed.Value) : null,
             });
             var task = FromApi(listId, createdTask);
             await Tasks.SetItemAsync(task);
@@ -98,10 +99,10 @@ namespace app.Services.Data
             if (Graph == null) throw new InvalidOperationException("Graph client not available");
             await Graph.Me.Todo.Lists[task.ParentId].Tasks[task.ItemId].Request().UpdateAsync(new TodoTask
             {
-                Title = task.Title,
-                Importance = task.IsImportant ? Importance.High : Importance.Normal,
-                Status = task.IsCompleted ? Microsoft.Graph.TaskStatus.Completed : Microsoft.Graph.TaskStatus.NotStarted,
-                CompletedDateTime = task.IsCompleted ? new DateTimeTimeZone { DateTime = task.Completed!.Value.ToString("o"), TimeZone = "UTC" } : null,
+                Title = task.Name,
+                Importance = task.Important ? Importance.High : Importance.Normal,
+                Status = task.Completed.HasValue ? Microsoft.Graph.TaskStatus.Completed : Microsoft.Graph.TaskStatus.NotStarted,
+                CompletedDateTime = task.Completed.HasValue ? DateTimeTimeZone.FromDateTimeOffset(task.Completed.Value) : null,
             });
             await Tasks.SetItemAsync(task);
         }

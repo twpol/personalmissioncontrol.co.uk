@@ -15,8 +15,8 @@ public class JsonConverterTask : JsonConverter<TaskModel>
     {
         writer.WriteStartObject();
         writer.WriteString("id", value.Id);
-        writer.WriteString("name", value.Title);
-        writer.WriteBoolean("important", value.IsImportant);
+        writer.WriteString("name", value.Name);
+        writer.WriteBoolean("important", value.Important);
         writer.WriteString("created", value.Created);
         if (value.Completed.HasValue) writer.WriteString("completed", value.Completed.Value); else writer.WriteNull("completed");
         writer.WriteEndObject();
