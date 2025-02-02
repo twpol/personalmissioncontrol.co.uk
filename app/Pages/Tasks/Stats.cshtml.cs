@@ -38,8 +38,8 @@ namespace app.Pages.Tasks
                 var weekEnd = weekStart.AddDays(7);
                 var weekTasksCreated = tasks.Where(task => weekStart <= task.EarliestDate && task.EarliestDate < weekEnd);
                 var weekTasksCompleted = tasks.Where(task => task.Completed != null && weekStart <= task.Completed && task.Completed < weekEnd);
-                var weekTasksCreatedImportant = weekTasksCreated.Where(task => task.IsImportant);
-                var weekTasksCompletedImportant = weekTasksCompleted.Where(task => task.IsImportant);
+                var weekTasksCreatedImportant = weekTasksCreated.Where(task => task.Important);
+                var weekTasksCompletedImportant = weekTasksCompleted.Where(task => task.Important);
                 weeks.Add(new DisplayWeek(
                     new DateTimeOffset(weekStart),
                     weekTasksCreated.Count(),

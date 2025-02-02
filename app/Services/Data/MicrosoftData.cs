@@ -76,7 +76,7 @@ namespace app.Services.Data
             }
         }
 
-        public async Task<TaskModel> CreateTask(string listId, string name, string description, bool isImportant, bool isCompleted)
+        public async Task<TaskModel> CreateTask(string listId, string name, string description, bool important, bool isCompleted)
         {
             if (Logger.IsEnabled(LogLevel.Debug)) Logger.LogDebug("CreateTask({AccountId}, {ListId})", AccountId, listId);
             if (Graph == null) throw new InvalidOperationException("Graph client not available");
@@ -84,7 +84,7 @@ namespace app.Services.Data
             {
                 Title = name,
                 Body = new ItemBody { Content = description, ContentType = BodyType.Text },
-                Importance = isImportant ? Importance.High : Importance.Normal,
+                Importance = important ? Importance.High : Importance.Normal,
                 Status = isCompleted ? Microsoft.Graph.TaskStatus.Completed : Microsoft.Graph.TaskStatus.NotStarted,
             });
             var task = FromApi(listId, createdTask);
@@ -99,7 +99,7 @@ namespace app.Services.Data
             await Graph.Me.Todo.Lists[task.ParentId].Tasks[task.ItemId].Request().UpdateAsync(new TodoTask
             {
                 Title = task.Name,
-                Importance = task.IsImportant ? Importance.High : Importance.Normal,
+                Importance = task.Important ? Importance.High : Importance.Normal,
                 Status = task.IsCompleted ? Microsoft.Graph.TaskStatus.Completed : Microsoft.Graph.TaskStatus.NotStarted,
                 CompletedDateTime = task.IsCompleted ? new DateTimeTimeZone { DateTime = task.Completed!.Value.ToString("o"), TimeZone = "UTC" } : null,
             });

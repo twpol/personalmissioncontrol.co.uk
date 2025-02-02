@@ -18,12 +18,13 @@ namespace app.Models
 
         // TODO: Remove these temporary properties when migration complete
         public string Name => Title;
+        public bool Important => IsImportant;
 
         [JsonIgnore]
         public DateTimeOffset EarliestDate => Completed != null && Completed < Created ? Completed.Value : Created;
 
         [JsonIgnore]
-        public string Classes => "task " + (IsCompleted ? "task--completed text-black-50" : "task--uncompleted") + " " + (IsImportant ? "task--important" : "task--unimportant");
+        public string Classes => "task " + (IsCompleted ? "task--completed text-black-50" : "task--uncompleted") + " " + (Important ? "task--important" : "task--unimportant");
 
         [JsonIgnore]
         public string NameHtml => Markdown.ToHtml(Name, MarkdownPipeline);
@@ -32,7 +33,7 @@ namespace app.Models
         public bool IsCompleted => Completed.HasValue;
 
         [JsonIgnore]
-        public string SortKey => $"{(IsCompleted ? 2 : 1)}{(IsImportant ? 1 : 2)} {Name}";
+        public string SortKey => $"{(IsCompleted ? 2 : 1)}{(Important ? 1 : 2)} {Name}";
 
         [JsonIgnore]
         IEnumerable<string> NameWords => Name.Split(' ', StringSplitOptions.RemoveEmptyEntries);

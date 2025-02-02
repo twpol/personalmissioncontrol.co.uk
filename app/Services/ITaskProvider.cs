@@ -9,7 +9,7 @@ namespace app.Services
         public IAsyncEnumerable<TaskListModel> GetTaskLists();
         public IAsyncEnumerable<TaskModel> GetTasks();
         public IAsyncEnumerable<TaskModel> GetTasks(string listId);
-        public Task<TaskModel> CreateTask(string listId, string name, string description, bool isImportant, bool isCompleted);
+        public Task<TaskModel> CreateTask(string listId, string name, string description, bool important, bool isCompleted);
         public Task UpdateTask(TaskModel task);
     }
 }
