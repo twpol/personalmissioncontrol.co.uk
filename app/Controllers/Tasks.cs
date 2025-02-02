@@ -45,7 +45,7 @@ public class TasksController : ControllerBase
     }
 
     [HttpPost("lists/{listId}/tasks")]
-    public async Task<IActionResult> CreateTask(string listId, [FromHeader(Name = "Task-Key")] string? taskKey, [FromForm] string name, [FromForm] string? description, [FromForm] bool? important, [FromForm] bool? completed)
+    public async Task<IActionResult> CreateTask(string listId, [FromHeader(Name = "Task-Key")] string? taskKey, [FromForm] string name, [FromForm] string? description, [FromForm] bool? important, [FromForm] DateTimeOffset? completed)
     {
         if (string.IsNullOrWhiteSpace(name)) return BadRequest("Name is required");
         if (taskKey != null && !name.Contains(taskKey)) return BadRequest("Name does not contain Task-Key");
@@ -59,11 +59,11 @@ public class TasksController : ControllerBase
             if (name != null) task = task with { Title = name };
             // TODO: if (description != null) task = task with { Description = description };
             if (important.HasValue) task = task with { IsImportant = important.Value };
-            if (completed.HasValue && completed.Value != task.Completed.HasValue) task = task with { Completed = completed.Value ? DateTimeOffset.UtcNow : null };
+            if (Request.Form.ContainsKey("completed")) task = task with { Completed = completed };
             await provider.UpdateTask(task);
             return Ok(task);
         }
-        return Ok(await provider.CreateTask(list.ItemId, name, description ?? "", important ?? false, completed ?? false));
+        return Ok(await provider.CreateTask(list.ItemId, name, description ?? "", important ?? false, completed));
     }
 
     async Task<(ITaskDataProvider? Provider, TaskListModel? List)> GetProviderTaskList(string listId)
