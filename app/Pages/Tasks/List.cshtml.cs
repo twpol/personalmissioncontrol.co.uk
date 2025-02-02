@@ -60,7 +60,7 @@ namespace app.Pages.Tasks
             Title = text;
 
             var tasks = await TaskProviders.SelectManyAsync(provider => provider.GetTasks()).ToListAsync();
-            Tasks = tasks.Where(task => task.Title.Contains(Title)).OrderBy(task => task.SortKey);
+            Tasks = tasks.Where(task => task.Name.Contains(Title)).OrderBy(task => task.SortKey);
         }
     }
 }

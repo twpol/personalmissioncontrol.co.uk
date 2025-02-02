@@ -16,6 +16,9 @@ namespace app.Models
             .UseInline<LinkInlineParser>()
             .Build();
 
+        // TODO: Remove these temporary properties when migration complete
+        public string Name => Title;
+
         [JsonIgnore]
         public DateTimeOffset EarliestDate => Completed != null && Completed < Created ? Completed.Value : Created;
 
@@ -23,22 +26,22 @@ namespace app.Models
         public string Classes => "task " + (IsCompleted ? "task--completed text-black-50" : "task--uncompleted") + " " + (IsImportant ? "task--important" : "task--unimportant");
 
         [JsonIgnore]
-        public string TitleHtml => Markdown.ToHtml(Title, MarkdownPipeline);
+        public string NameHtml => Markdown.ToHtml(Name, MarkdownPipeline);
 
         [JsonIgnore]
         public bool IsCompleted => Completed.HasValue;
 
         [JsonIgnore]
-        public string SortKey => $"{(IsCompleted ? 2 : 1)}{(IsImportant ? 1 : 2)} {Title}";
+        public string SortKey => $"{(IsCompleted ? 2 : 1)}{(IsImportant ? 1 : 2)} {Name}";
 
         [JsonIgnore]
-        IEnumerable<string> TitleWords => Title.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+        IEnumerable<string> NameWords => Name.Split(' ', StringSplitOptions.RemoveEmptyEntries);
 
         [JsonIgnore]
-        public string? Tag => TitleWords.Take(1).Where(tag => tag.StartsWith("#")).FirstOrDefault();
+        public string? Tag => NameWords.Take(1).Where(tag => tag.StartsWith("#")).FirstOrDefault();
 
         [JsonIgnore]
-        public List<string> Tags => TitleWords.Skip(1).Where(tag => tag.StartsWith("#")).ToList();
+        public List<string> Tags => NameWords.Skip(1).Where(tag => tag.StartsWith("#")).ToList();
 
         [JsonIgnore]
         public List<TaskModel> Children = new();
