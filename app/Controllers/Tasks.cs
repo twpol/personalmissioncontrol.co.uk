@@ -66,6 +66,34 @@ public class TasksController : ControllerBase
         return Ok(await provider.CreateTask(list.ItemId, title, body ?? "", isImportant ?? false, isCompleted ?? false));
     }
 
+    [HttpGet("lists/{listId}/tasks/{taskId}")]
+    public async Task<IActionResult> GetTask(string listId, string taskId)
+    {
+        var (provider, list) = await GetProviderTaskList(listId);
+        if (provider == null || list == null) return NotFound("List not found");
+
+        var task = await provider.GetTasks(list.ItemId).FirstOrDefaultAsync(t => t.Id == taskId);
+        if (task == null) return NotFound("Task not found");
+        return Ok(task);
+    }
+
+    [HttpPost("lists/{listId}/tasks/{taskId}")]
+    public async Task<IActionResult> GetTask(string listId, string taskId, [FromForm] string? title, [FromForm] string? body, [FromForm] bool? isImportant, [FromForm] bool? isCompleted)
+    {
+        var (provider, list) = await GetProviderTaskList(listId);
+        if (provider == null || list == null) return NotFound("List not found");
+
+        var task = await provider.GetTasks(list.ItemId).FirstOrDefaultAsync(t => t.Id == taskId);
+        if (task == null) return NotFound("Task not found");
+
+        if (title != null) task = task with { Title = title };
+        // TODO: if (body != null) task = task with { Body = body };
+        if (isImportant.HasValue) task = task with { IsImportant = isImportant.Value };
+        if (isCompleted.HasValue && isCompleted.Value != task.IsCompleted) task = task with { Completed = isCompleted.Value ? DateTimeOffset.UtcNow : null };
+        await provider.UpdateTask(task);
+        return Ok(task);
+    }
+
     async Task<(ITaskDataProvider? Provider, TaskListModel? List)> GetProviderTaskList(string listId)
     {
         foreach (var provider in TaskProviders)
