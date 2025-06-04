@@ -97,6 +97,18 @@ namespace app.Services.Data
         {
             if (Logger.IsEnabled(LogLevel.Debug)) Logger.LogDebug("UpdateTask({AccountId}, {ListId}, {TaskId})", AccountId, task.ParentId, task.ItemId);
             if (Graph == null) throw new InvalidOperationException("Graph client not available");
+            // HACK: Microsoft Tasks do not update the completed date unless changing status, so force the issue by marking not-started first
+            if (task.IsCompleted)
+            {
+                var oldTask = await Tasks.GetItemAsync(task.AccountId, task.ParentId, task.ItemId);
+                if (oldTask == null || oldTask.Completed != task.Completed)
+                {
+                    await Graph.Me.Todo.Lists[task.ParentId].Tasks[task.ItemId].Request().UpdateAsync(new TodoTask
+                    {
+                        Status = Microsoft.Graph.TaskStatus.NotStarted,
+                    });
+                }
+            }
             await Graph.Me.Todo.Lists[task.ParentId].Tasks[task.ItemId].Request().UpdateAsync(new TodoTask
             {
                 Title = task.Title,
