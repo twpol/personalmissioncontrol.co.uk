@@ -19,23 +19,26 @@ namespace app.Services.Data
         {
             services.AddScoped<MicrosoftData>();
             services.AddScoped<IDataProvider, MicrosoftData>(s => s.GetRequiredService<MicrosoftData>());
+            services.AddScoped<IEmailDataProvider, MicrosoftData>(s => s.GetRequiredService<MicrosoftData>());
             services.AddScoped<ITaskDataProvider, MicrosoftData>(s => s.GetRequiredService<MicrosoftData>());
             return services;
         }
     }
 
-    public class MicrosoftData : ITaskDataProvider
+    public class MicrosoftData : IEmailDataProvider, ITaskDataProvider
     {
         readonly ILogger<MicrosoftData> Logger;
         readonly GraphServiceClient? Graph;
         readonly string AccountId;
+        readonly IModelStore<EmailFolderModel> EmailFolders;
         readonly IModelStore<TaskListModel> TaskLists;
         readonly IModelStore<TaskModel> Tasks;
 
-        public MicrosoftData(ILogger<MicrosoftData> logger, MicrosoftGraphProvider graphProvider, IModelStore<TaskListModel> taskLists, IModelStore<TaskModel> tasks)
+        public MicrosoftData(ILogger<MicrosoftData> logger, MicrosoftGraphProvider graphProvider, IModelStore<EmailFolderModel> emailFolders, IModelStore<TaskListModel> taskLists, IModelStore<TaskModel> tasks)
         {
             Logger = logger;
             graphProvider.TryGet("Microsoft", out Graph, out AccountId);
+            EmailFolders = emailFolders;
             TaskLists = taskLists;
             Tasks = tasks;
             if (Logger.IsEnabled(LogLevel.Debug)) Logger.LogDebug(".ctor({AccountId})", AccountId);
@@ -44,6 +47,7 @@ namespace app.Services.Data
         public async Task UpdateData()
         {
             if (Logger.IsEnabled(LogLevel.Debug)) Logger.LogDebug("UpdateData({AccountId})", AccountId);
+            await UpdateEmails();
             await UpdateTasks();
         }
 
@@ -119,6 +123,43 @@ namespace app.Services.Data
             await Tasks.SetItemAsync(task);
         }
 
+        #region Emails
+        async Task UpdateEmails()
+        {
+            if (Logger.IsEnabled(LogLevel.Debug)) Logger.LogDebug("UpdateEmails({AccountId})", AccountId);
+            await EmailFolders.UpdateCollectionAsync(AccountId, "", UpdateCollectionEmailFolders);
+        }
+
+        async IAsyncEnumerable<EmailFolderModel> UpdateCollectionEmailFolders()
+        {
+            if (Logger.IsEnabled(LogLevel.Debug)) Logger.LogDebug("UpdateCollectionEmailFolders({AccountId})", AccountId);
+            if (Graph == null) yield break;
+            var firstFolder = await Graph.Me.MailFolders.Request().Top(1).GetAsync();
+            await foreach (var child in UpdateCollectionEmailFolder(firstFolder[0].ParentFolderId, Array.Empty<string>())) yield return child;
+        }
+
+        async IAsyncEnumerable<EmailFolderModel> UpdateCollectionEmailFolder(string folderId, IEnumerable<string> parents)
+        {
+            if (Graph == null) yield break;
+            var folders = await Graph.Me.MailFolders[folderId].ChildFolders.Request().Top(1000).GetAsync();
+            while (folders != null)
+            {
+                foreach (var folder in folders)
+                {
+                    yield return FromApi(folder, parents);
+                    await foreach (var child in UpdateCollectionEmailFolder(folder.Id, parents.Append(folder.DisplayName))) yield return child;
+                }
+                folders = folders.NextPageRequest != null ? await folders.NextPageRequest.GetAsync() : null;
+            }
+        }
+
+        EmailFolderModel FromApi(MailFolder folder, IEnumerable<string> parents)
+        {
+            return new EmailFolderModel(AccountId, "", folder.Id, string.Join("/", parents.Append(folder.DisplayName)), folder.TotalItemCount ?? -1, folder.UnreadItemCount ?? -1);
+        }
+        #endregion
+
+        #region Tasks
         async Task UpdateTasks()
         {
             if (Logger.IsEnabled(LogLevel.Debug)) Logger.LogDebug("UpdateTasks({AccountId})", AccountId);
@@ -187,5 +228,6 @@ namespace app.Services.Data
                 _ => throw new InvalidDataException($"Unknown time zone: {dateTimeTimeZone.TimeZone}"),
             };
         }
+        #endregion
     }
 }
