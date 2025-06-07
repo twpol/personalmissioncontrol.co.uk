@@ -16,6 +16,7 @@ public class ApiModelFilterAttribute : ActionFilterAttribute
             {
                 PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
             };
+            options.Converters.Add(new JsonConverterEmailFolder());
             options.Converters.Add(new JsonConverterTaskList());
             options.Converters.Add(new JsonConverterTask());
             result.Formatters.Add(new SystemTextJsonOutputFormatter(options));

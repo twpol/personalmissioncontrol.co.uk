@@ -51,6 +51,15 @@ namespace app.Services.Data
             await UpdateTasks();
         }
 
+        public async IAsyncEnumerable<EmailFolderModel> GetEmailFolders()
+        {
+            if (Logger.IsEnabled(LogLevel.Debug)) Logger.LogDebug("GetEmailFolders({AccountId})", AccountId);
+            await foreach (var emailFolder in EmailFolders.GetCollectionAsync(AccountId, ""))
+            {
+                yield return emailFolder;
+            }
+        }
+
         public async IAsyncEnumerable<TaskListModel> GetTaskLists()
         {
             if (Logger.IsEnabled(LogLevel.Debug)) Logger.LogDebug("GetTaskLists({AccountId})", AccountId);
