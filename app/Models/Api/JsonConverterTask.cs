@@ -17,8 +17,8 @@ public class JsonConverterTask : JsonConverter<TaskModel>
         writer.WriteString("id", value.Id);
         writer.WriteString("title", value.Title);
         writer.WriteBoolean("important", value.IsImportant);
-        writer.WriteString("created", value.Created);
-        if (value.Completed.HasValue) writer.WriteString("completed", value.Completed.Value); else writer.WriteNull("completed");
+        writer.WriteString("created", value.Created.ToRfc3339(DateTimeKind.Utc));
+        if (value.Completed.HasValue) writer.WriteString("completed", value.Completed.Value.ToRfc3339(DateTimeKind.Utc)); else writer.WriteNull("completed");
         writer.WriteEndObject();
     }
 }
