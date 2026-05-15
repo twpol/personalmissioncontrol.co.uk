@@ -78,7 +78,7 @@ namespace app.Pages.Microsoft.Email
             {
                 get
                 {
-                    return $"{(Unread ? 1 : 0)} {(Flagged ? 1 : 0)} {Date:u}";
+                    return $"{(Unread ? 1 : 0)} {(Flagged ? 1 : 0)} {(Completed ? 1 : 0)} {Date:u}";
                 }
             }
         }
